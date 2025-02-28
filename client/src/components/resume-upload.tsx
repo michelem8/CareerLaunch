@@ -41,15 +41,14 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
       console.error("Resume analysis error:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to analyze resume";
 
-      // Show a more user-friendly message for rate limit errors
-      const isBusyError = errorMessage.includes("busy") || errorMessage.includes("try again");
+      // Show a more specific message for billing-related errors
+      const isBillingError = errorMessage.includes("quota exceeded") || errorMessage.includes("billing");
+      const isServiceError = errorMessage.includes("configuration") || errorMessage.includes("try again");
 
       toast({
         variant: "destructive",
-        title: isBusyError ? "Service Busy" : "Analysis Failed",
-        description: isBusyError 
-          ? "Our analysis service is experiencing high demand. Please try again in a few minutes."
-          : errorMessage,
+        title: isBillingError ? "API Quota Exceeded" : isServiceError ? "Service Error" : "Analysis Failed",
+        description: errorMessage,
       });
     },
   });
@@ -75,16 +74,14 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>
-            {error instanceof Error && error.message.includes("busy") 
-              ? "Service Busy" 
-              : "Error"}
+            {error instanceof Error && error.message.includes("quota exceeded") 
+              ? "API Quota Exceeded" 
+              : error instanceof Error && error.message.includes("configuration")
+                ? "Service Error"
+                : "Error"}
           </AlertTitle>
           <AlertDescription>
-            {error instanceof Error && error.message.includes("busy")
-              ? "Our analysis service is experiencing high demand. Please try again in a few minutes."
-              : error instanceof Error 
-                ? error.message 
-                : "Failed to analyze resume. Please try again."}
+            {error instanceof Error ? error.message : "Failed to analyze resume. Please try again."}
           </AlertDescription>
         </Alert>
       )}

@@ -43,7 +43,7 @@ export async function analyzeResume(resumeText: string) {
     if (error instanceof Error) {
       // Handle rate limit error specifically
       if (error.message.includes("429") || error.message.includes("quota")) {
-        throw new Error("Service is currently busy. Please try again in a few minutes.");
+        throw new Error("OpenAI API quota exceeded. Please ensure your account has proper billing setup.");
       }
       if (error.message.includes("API key")) {
         throw new Error("Service configuration error. Please try again later.");
@@ -99,7 +99,7 @@ export async function getSkillGapAnalysis(
     if (error instanceof Error) {
       // Handle rate limit error specifically
       if (error.message.includes("429") || error.message.includes("quota")) {
-        throw new Error("Service is currently busy. Please try again in a few minutes.");
+        throw new Error("OpenAI API quota exceeded. Please ensure your account has proper billing setup.");
       }
       if (error.message.includes("API key")) {
         throw new Error("Service configuration error. Please try again later.");
