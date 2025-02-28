@@ -32,7 +32,7 @@ export type ResumeAnalysis = {
 
 export type UserPreferences = {
   preferredIndustries: string[];
-  learningStyle: string;
+  learningStyles: string[];  
   timeCommitment: string;
 };
 
@@ -46,7 +46,7 @@ export const surveySchema = z.object({
   targetRole: z.string().min(1, "Target role is required"),
   preferences: z.object({
     preferredIndustries: z.array(z.string()).min(1, "Select at least one industry"),
-    learningStyle: z.string().min(1, "Learning style is required"),
+    learningStyles: z.array(z.string()).min(1, "Select at least one learning style"),
     timeCommitment: z.string().min(1, "Time commitment is required"),
   }),
 });

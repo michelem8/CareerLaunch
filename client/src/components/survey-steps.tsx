@@ -8,10 +8,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type SurveyStepsProps = {
   onComplete: () => void;
 };
+
+const INDUSTRIES = [
+  { id: "technology", label: "Technology" },
+  { id: "healthcare", label: "Healthcare" },
+  { id: "finance", label: "Finance" },
+  { id: "education", label: "Education" },
+  { id: "retail", label: "Retail" },
+  { id: "manufacturing", label: "Manufacturing" },
+];
+
+const LEARNING_STYLES = [
+  { id: "visual", label: "Visual Learning" },
+  { id: "practical", label: "Hands-on Practice" },
+  { id: "theoretical", label: "Theoretical Study" },
+  { id: "collaborative", label: "Group Learning" },
+  { id: "self-paced", label: "Self-Paced" },
+];
 
 export function SurveySteps({ onComplete }: SurveyStepsProps) {
   const { toast } = useToast();
@@ -22,8 +40,8 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
       currentRole: "",
       targetRole: "",
       preferences: {
-        preferredIndustries: ["technology"],
-        learningStyle: "",
+        preferredIndustries: [],
+        learningStyles: [],
         timeCommitment: "",
       },
     },
@@ -89,22 +107,75 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
 
         <FormField
           control={form.control}
-          name="preferences.learningStyle"
-          render={({ field }) => (
+          name="preferences.preferredIndustries"
+          render={() => (
             <FormItem>
-              <FormLabel>Preferred Learning Style</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your learning style" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="visual">Visual Learning</SelectItem>
-                  <SelectItem value="practical">Hands-on Practice</SelectItem>
-                  <SelectItem value="theoretical">Theoretical Study</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormLabel>Industries of Interest</FormLabel>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                {INDUSTRIES.map((industry) => (
+                  <FormField
+                    key={industry.id}
+                    control={form.control}
+                    name="preferences.preferredIndustries"
+                    render={({ field }) => (
+                      <FormItem key={industry.id} className="flex items-center space-x-3">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value?.includes(industry.id)}
+                            onCheckedChange={(checked) => {
+                              const value = field.value || [];
+                              if (checked) {
+                                field.onChange([...value, industry.id]);
+                              } else {
+                                field.onChange(value.filter((val) => val !== industry.id));
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">{industry.label}</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="preferences.learningStyles"
+          render={() => (
+            <FormItem>
+              <FormLabel>Learning Styles</FormLabel>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                {LEARNING_STYLES.map((style) => (
+                  <FormField
+                    key={style.id}
+                    control={form.control}
+                    name="preferences.learningStyles"
+                    render={({ field }) => (
+                      <FormItem key={style.id} className="flex items-center space-x-3">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value?.includes(style.id)}
+                            onCheckedChange={(checked) => {
+                              const value = field.value || [];
+                              if (checked) {
+                                field.onChange([...value, style.id]);
+                              } else {
+                                field.onChange(value.filter((val) => val !== style.id));
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">{style.label}</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
               <FormMessage />
             </FormItem>
           )}
