@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function analyzeResume(resumeText: string) {
@@ -10,13 +9,14 @@ export async function analyzeResume(resumeText: string) {
     }
 
     console.log("Starting resume analysis...");
+    console.log("API Key status:", process.env.OPENAI_API_KEY ? "Present" : "Missing");
 
     if (!resumeText || resumeText.trim().length === 0) {
       throw new Error("Resume text is empty");
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4", // Changed from gpt-4o to gpt-4
       messages: [
         {
           role: "system",
@@ -72,7 +72,7 @@ export async function getSkillGapAnalysis(
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4", // Changed from gpt-4o to gpt-4
       messages: [
         {
           role: "system",
