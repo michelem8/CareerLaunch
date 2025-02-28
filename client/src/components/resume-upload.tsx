@@ -21,9 +21,7 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
         throw new Error("Please enter your resume content before analyzing");
       }
 
-      console.log("Submitting resume for analysis...");
       const response = await apiRequest("POST", "/api/resume/analyze", { resumeText: text });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to analyze resume");
@@ -41,10 +39,17 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
     },
     onError: (error) => {
       console.error("Resume analysis error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to analyze resume";
+
+      // Show a more user-friendly message for rate limit errors
+      const isBusyError = errorMessage.includes("busy") || errorMessage.includes("try again");
+
       toast({
         variant: "destructive",
-        title: "Analysis Failed",
-        description: error instanceof Error ? error.message : "Failed to analyze resume. Please try again.",
+        title: isBusyError ? "Service Busy" : "Analysis Failed",
+        description: isBusyError 
+          ? "Our analysis service is experiencing high demand. Please try again in a few minutes."
+          : errorMessage,
       });
     },
   });
@@ -69,9 +74,17 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>
+            {error instanceof Error && error.message.includes("busy") 
+              ? "Service Busy" 
+              : "Error"}
+          </AlertTitle>
           <AlertDescription>
-            {error instanceof Error ? error.message : "Failed to analyze resume. Please try again."}
+            {error instanceof Error && error.message.includes("busy")
+              ? "Our analysis service is experiencing high demand. Please try again in a few minutes."
+              : error instanceof Error 
+                ? error.message 
+                : "Failed to analyze resume. Please try again."}
           </AlertDescription>
         </Alert>
       )}

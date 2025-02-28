@@ -41,10 +41,14 @@ export async function analyzeResume(resumeText: string) {
   } catch (error) {
     console.error("Error analyzing resume:", error);
     if (error instanceof Error) {
-      if (error.message.includes("API key")) {
-        throw new Error("OpenAI API configuration error. Please check your API key.");
+      // Handle rate limit error specifically
+      if (error.message.includes("429") || error.message.includes("quota")) {
+        throw new Error("Service is currently busy. Please try again in a few minutes.");
       }
-      throw new Error(`Resume analysis failed: ${error.message}`);
+      if (error.message.includes("API key")) {
+        throw new Error("Service configuration error. Please try again later.");
+      }
+      throw new Error(error.message);
     }
     throw new Error("An unexpected error occurred during resume analysis");
   }
@@ -93,10 +97,14 @@ export async function getSkillGapAnalysis(
   } catch (error) {
     console.error("Error analyzing skill gap:", error);
     if (error instanceof Error) {
-      if (error.message.includes("API key")) {
-        throw new Error("OpenAI API configuration error. Please check your API key.");
+      // Handle rate limit error specifically
+      if (error.message.includes("429") || error.message.includes("quota")) {
+        throw new Error("Service is currently busy. Please try again in a few minutes.");
       }
-      throw new Error(`Skill gap analysis failed: ${error.message}`);
+      if (error.message.includes("API key")) {
+        throw new Error("Service configuration error. Please try again later.");
+      }
+      throw new Error(error.message);
     }
     throw new Error("An unexpected error occurred during skill gap analysis");
   }
