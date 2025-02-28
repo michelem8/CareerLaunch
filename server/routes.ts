@@ -39,10 +39,23 @@ export async function registerRoutes(app: Express) {
       console.log("Received resume data:", req.body); // Debug log
       const { resumeText } = z.object({ resumeText: z.string() }).parse(req.body);
       const userId = 1; // In a real app, get from session
+      const user = await storage.getUser(userId);
+      if (!user) throw new Error("User not found");
+
       const analysis = await analyzeResume(resumeText);
-      const user = await storage.updateUserResumeAnalysis(userId, analysis);
-      const skillGap = await getSkillGapAnalysis(analysis.skills || [], user.targetRole || "");
-      res.json({ user, skillGap });
+      const updatedUser = await storage.updateUserResumeAnalysis(userId, analysis);
+
+      // Get skill gap analysis based on current role and target role
+      const skillGap = await getSkillGapAnalysis(
+        analysis.skills || [], 
+        updatedUser.targetRole || ""
+      );
+
+      console.log("User current role:", updatedUser.currentRole);
+      console.log("User target role:", updatedUser.targetRole);
+      console.log("Skill gap analysis:", skillGap);
+
+      res.json({ user: updatedUser, skillGap });
     } catch (error) {
       console.error("Resume analysis error:", error); // Debug log
       res.status(400).json({ error: error instanceof Error ? error.message : "Failed to analyze resume" });
@@ -54,7 +67,14 @@ export async function registerRoutes(app: Express) {
       const userId = 1; // In a real app, get from session
       const user = await storage.getUser(userId);
       if (!user) throw new Error("User not found");
-      const courses = await storage.getCoursesBySkills(user.skills || []);
+
+      // Get courses based on both current skills and identified skill gaps
+      const skillsToMatch = user.skills || [];
+      const courses = await storage.getCoursesBySkills(skillsToMatch);
+
+      console.log("Recommending courses based on skills:", skillsToMatch);
+      console.log("Found courses:", courses);
+
       res.json(courses);
     } catch (error) {
       res.status(400).json({ error: "Failed to get course recommendations" });

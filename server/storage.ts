@@ -114,7 +114,12 @@ export class MemStorage implements IStorage {
 
   async getCoursesBySkills(skills: string[]): Promise<Course[]> {
     return Array.from(this.courses.values()).filter(course =>
-      course.skills.some(skill => skills.includes(skill.toLowerCase()))
+      course.skills.some(skill => 
+        skills.some(userSkill => 
+          userSkill.toLowerCase().includes(skill.toLowerCase()) ||
+          skill.toLowerCase().includes(userSkill.toLowerCase())
+        )
+      )
     );
   }
 }
