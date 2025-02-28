@@ -1,10 +1,11 @@
 import OpenAI from "openai";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "default-key-for-development" });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function analyzeResume(resumeText: string) {
   try {
+    console.log("Analyzing resume with OpenAI...");
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -20,10 +21,15 @@ export async function analyzeResume(resumeText: string) {
       response_format: { type: "json_object" }
     });
 
-    return JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No response received from OpenAI");
+    }
+
+    return JSON.parse(content);
   } catch (error) {
     console.error("Error analyzing resume:", error);
-    throw new Error("Failed to analyze resume");
+    throw new Error(`Failed to analyze resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -32,6 +38,7 @@ export async function getSkillGapAnalysis(
   targetRole: string
 ) {
   try {
+    console.log("Getting skill gap analysis...");
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -47,9 +54,14 @@ export async function getSkillGapAnalysis(
       response_format: { type: "json_object" }
     });
 
-    return JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No response received from OpenAI");
+    }
+
+    return JSON.parse(content);
   } catch (error) {
     console.error("Error analyzing skill gap:", error);
-    throw new Error("Failed to analyze skill gap");
+    throw new Error(`Failed to analyze skill gap: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

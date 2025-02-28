@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/queryClient";
 import { AlertCircle, Upload } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 type ResumeUploadProps = {
   onComplete: () => void;
@@ -12,12 +13,33 @@ type ResumeUploadProps = {
 
 export function ResumeUpload({ onComplete }: ResumeUploadProps) {
   const [resumeText, setResumeText] = useState("");
+  const { toast } = useToast();
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: async (text: string) => {
-      await apiRequest("POST", "/api/resume/analyze", { resumeText: text });
+      console.log("Uploading resume text:", text); // Debug log
+      const response = await apiRequest("POST", "/api/resume/analyze", { resumeText: text });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to analyze resume");
+      }
+      return response.json();
     },
-    onSuccess: onComplete,
+    onSuccess: () => {
+      toast({
+        title: "Resume analyzed",
+        description: "Your resume has been successfully analyzed.",
+      });
+      onComplete();
+    },
+    onError: (error) => {
+      console.error("Resume analysis error:", error); // Debug log
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to analyze resume",
+      });
+    },
   });
 
   return (
