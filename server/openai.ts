@@ -76,11 +76,11 @@ export async function getSkillGapAnalysis(
       messages: [
         {
           role: "system",
-          content: "Analyze the skill gap between current skills and target role. Return results in JSON format with the following structure: { missingSkills: string[], recommendations: string[] }. Each array should contain at least 2-3 items."
+          content: "As a career progression expert, analyze the gap between current skills and target role requirements. Focus on skills needed for career advancement. Return results in JSON format with the following structure: { missingSkills: string[], recommendations: string[] }. Each array should contain 3-5 specific, actionable items."
         },
         {
           role: "user",
-          content: `Current skills: ${currentSkills.join(", ")}\nTarget role: ${targetRole}`
+          content: `Given these current skills:\n${currentSkills.join(", ")}\n\nWhat skills and knowledge are needed to succeed as a: ${targetRole}`
         }
       ],
       response_format: { type: "json_object" }
@@ -97,7 +97,6 @@ export async function getSkillGapAnalysis(
   } catch (error) {
     console.error("Error analyzing skill gap:", error);
     if (error instanceof Error) {
-      // Handle rate limit error specifically
       if (error.message.includes("429") || error.message.includes("quota")) {
         throw new Error("OpenAI API quota exceeded. Please ensure your account has proper billing setup.");
       }

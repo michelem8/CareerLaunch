@@ -40,7 +40,22 @@ export class MemStorage implements IStorage {
         skills: ["data analysis", "statistics", "excel"],
         difficulty: "beginner",
       },
-      // Add more sample courses
+      {
+        id: 3,
+        title: "Product Management Leadership",
+        description: "Advanced strategies for product leadership",
+        imageUrl: "https://images.unsplash.com/photo-1552664730-d307ca884978",
+        skills: ["product management", "leadership", "strategy"],
+        difficulty: "advanced",
+      },
+      {
+        id: 4,
+        title: "Technical Team Leadership",
+        description: "Lead technical teams effectively",
+        imageUrl: "https://images.unsplash.com/photo-1516321165247-4aa89a48be28",
+        skills: ["leadership", "team management", "technical communication"],
+        difficulty: "intermediate",
+      },
     ];
 
     sampleCourses.forEach(course => this.courses.set(course.id, course));
@@ -114,8 +129,8 @@ export class MemStorage implements IStorage {
 
   async getCoursesBySkills(skills: string[]): Promise<Course[]> {
     return Array.from(this.courses.values()).filter(course =>
-      course.skills.some(skill => 
-        skills.some(userSkill => 
+      course.skills.some(skill =>
+        skills.some(userSkill =>
           userSkill.toLowerCase().includes(skill.toLowerCase()) ||
           skill.toLowerCase().includes(userSkill.toLowerCase())
         )
