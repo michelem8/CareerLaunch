@@ -15,7 +15,7 @@ type SurveyStepsProps = {
 };
 
 const INDUSTRIES = [
-  { value: "popular", label: "Popular (Consumer-Facing Tech)" },
+  { value: "consumer", label: "Consumer-Facing Tech" },
   { value: "healthcare", label: "Healthcare" },
   { value: "ecommerce", label: "E-Commerce" },
   { value: "education", label: "Education" },
