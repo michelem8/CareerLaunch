@@ -16,7 +16,7 @@ export async function analyzeResume(resumeText: string) {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4", // Changed from gpt-4o to gpt-4
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
@@ -72,7 +72,7 @@ export async function getSkillGapAnalysis(
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4", // Changed from gpt-4o to gpt-4
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
