@@ -8,38 +8,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 type SurveyStepsProps = {
   onComplete: () => void;
 };
 
 const INDUSTRIES = [
-  { id: "technology", label: "Technology" },
-  { id: "healthcare", label: "Healthcare" },
-  { id: "finance", label: "Finance" },
-  { id: "education", label: "Education" },
-  { id: "retail", label: "Retail" },
-  { id: "manufacturing", label: "Manufacturing" },
-  { id: "consulting", label: "Consulting" },
-  { id: "media", label: "Media & Entertainment" },
-  { id: "nonprofit", label: "Non-Profit" },
-  { id: "government", label: "Government" },
-  { id: "energy", label: "Energy & Utilities" },
-  { id: "transportation", label: "Transportation & Logistics" },
-  { id: "real_estate", label: "Real Estate" },
-  { id: "hospitality", label: "Hospitality & Tourism" },
-  { id: "telecom", label: "Telecommunications" },
+  { value: "technology", label: "Technology" },
+  { value: "healthcare", label: "Healthcare" },
+  { value: "finance", label: "Finance" },
+  { value: "education", label: "Education" },
+  { value: "retail", label: "Retail" },
+  { value: "manufacturing", label: "Manufacturing" },
+  { value: "consulting", label: "Consulting" },
+  { value: "media", label: "Media & Entertainment" },
+  { value: "nonprofit", label: "Non-Profit" },
+  { value: "government", label: "Government" },
+  { value: "energy", label: "Energy & Utilities" },
+  { value: "transportation", label: "Transportation & Logistics" },
+  { value: "real_estate", label: "Real Estate" },
+  { value: "hospitality", label: "Hospitality & Tourism" },
+  { value: "telecom", label: "Telecommunications" },
 ];
 
 const LEARNING_STYLES = [
-  { id: "visual", label: "Visual Learning" },
-  { id: "practical", label: "Hands-on Practice" },
-  { id: "theoretical", label: "Theoretical Study" },
-  { id: "collaborative", label: "Group Learning" },
-  { id: "self-paced", label: "Self-Paced" },
-  { id: "interactive", label: "Interactive Workshops" },
-  { id: "mentorship", label: "One-on-One Mentorship" },
-  { id: "project_based", label: "Project-Based Learning" },
+  { value: "visual", label: "Visual Learning" },
+  { value: "practical", label: "Hands-on Practice" },
+  { value: "theoretical", label: "Theoretical Study" },
+  { value: "collaborative", label: "Group Learning" },
+  { value: "self-paced", label: "Self-Paced" },
+  { value: "interactive", label: "Interactive Workshops" },
+  { value: "mentorship", label: "One-on-One Mentorship" },
+  { value: "project_based", label: "Project-Based Learning" },
 ];
 
 export function SurveySteps({ onComplete }: SurveyStepsProps) {
@@ -122,27 +123,14 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Industries of Interest</FormLabel>
-              <Select
-                onValueChange={(value) => {
-                  const selectedValues = value.split(",").filter(Boolean);
-                  field.onChange(selectedValues);
-                }}
-                value={field.value?.join(",")}
-                multiple
-              >
-                <FormControl>
-                  <SelectTrigger className="h-auto">
-                    <SelectValue placeholder="Select industries" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {INDUSTRIES.map((industry) => (
-                    <SelectItem key={industry.id} value={industry.id}>
-                      {industry.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <MultiSelect
+                  options={INDUSTRIES}
+                  selected={field.value || []}
+                  onChange={field.onChange}
+                  placeholder="Select industries..."
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -154,27 +142,14 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Learning Styles</FormLabel>
-              <Select
-                onValueChange={(value) => {
-                  const selectedValues = value.split(",").filter(Boolean);
-                  field.onChange(selectedValues);
-                }}
-                value={field.value?.join(",")}
-                multiple
-              >
-                <FormControl>
-                  <SelectTrigger className="h-auto">
-                    <SelectValue placeholder="Select learning styles" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {LEARNING_STYLES.map((style) => (
-                    <SelectItem key={style.id} value={style.id}>
-                      {style.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <MultiSelect
+                  options={LEARNING_STYLES}
+                  selected={field.value || []}
+                  onChange={field.onChange}
+                  placeholder="Select learning styles..."
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
