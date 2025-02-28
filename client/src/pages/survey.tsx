@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { SurveySteps } from "@/components/survey-steps";
 import { ResumeUpload } from "@/components/resume-upload";
 import { Progress } from "@/components/ui/progress"; 
@@ -9,9 +11,36 @@ export default function Survey() {
   const [, navigate] = useLocation();
   const totalSteps = 3;
 
+  // Initialize user mutation
+  const initUserMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/users", {
+        username: "demo_user", // For demo purposes
+        password: "demo_password"
+      });
+      if (!response.ok) {
+        throw new Error("Failed to initialize user");
+      }
+      return response.json();
+    }
+  });
+
+  // Call initUser when component mounts
+  useState(() => {
+    initUserMutation.mutate();
+  }, []);
+
   const handleComplete = () => {
     navigate("/dashboard");
   };
+
+  if (initUserMutation.isPending) {
+    return <div>Initializing...</div>;
+  }
+
+  if (initUserMutation.error) {
+    return <div>Error initializing user profile. Please try again.</div>;
+  }
 
   return (
     <div className="min-h-screen bg-background">

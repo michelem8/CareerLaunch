@@ -2,15 +2,25 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { analyzeResume, getSkillGapAnalysis } from "./openai";
-import { surveySchema } from "@shared/schema";
+import { surveySchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express) {
+  app.post("/api/users", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      res.json(user);
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : "Invalid user data" });
+    }
+  });
+
   app.post("/api/survey", async (req, res) => {
     try {
       console.log("Received survey data:", req.body); // Debug log
       const validatedData = surveySchema.parse(req.body);
-      const userId = 1; // In a real app, get from session
+      const userId = 1; // In a real app, get from session or authentication middleware
       const user = await storage.updateUserSurvey(
         userId,
         validatedData.currentRole,
@@ -20,7 +30,7 @@ export async function registerRoutes(app: Express) {
       res.json(user);
     } catch (error) {
       console.error("Survey validation error:", error); // Debug log
-      res.status(400).json({ error: error.message || "Invalid survey data" });
+      res.status(400).json({ error: error instanceof Error ? error.message : "Invalid survey data" });
     }
   });
 
@@ -28,12 +38,9 @@ export async function registerRoutes(app: Express) {
     try {
       const { resumeText } = z.object({ resumeText: z.string() }).parse(req.body);
       const userId = 1; // In a real app, get from session
-
       const analysis = await analyzeResume(resumeText);
       const user = await storage.updateUserResumeAnalysis(userId, analysis);
-
       const skillGap = await getSkillGapAnalysis(analysis.skills, user.targetRole);
-
       res.json({ user, skillGap });
     } catch (error) {
       res.status(400).json({ error: "Failed to analyze resume" });
@@ -45,7 +52,6 @@ export async function registerRoutes(app: Express) {
       const userId = 1; // In a real app, get from session
       const user = await storage.getUser(userId);
       if (!user) throw new Error("User not found");
-
       const courses = await storage.getCoursesBySkills(user.skills);
       res.json(courses);
     } catch (error) {
