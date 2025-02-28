@@ -5,13 +5,22 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function analyzeResume(resumeText: string) {
   try {
-    console.log("Analyzing resume with OpenAI...");
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key is not configured");
+    }
+
+    console.log("Starting resume analysis...");
+
+    if (!resumeText || resumeText.trim().length === 0) {
+      throw new Error("Resume text is empty");
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "Analyze the resume and extract key information. Return results in JSON format with the following structure: { skills: string[], experience: string[], education: string[], suggestedRoles: string[] }"
+          content: "You are a resume analyzer. Extract key information from the resume in JSON format with the following structure: { skills: string[], experience: string[], education: string[], suggestedRoles: string[] }. Ensure all arrays contain at least one item, even if you need to make educated guesses based on the context."
         },
         {
           role: "user",
@@ -26,10 +35,18 @@ export async function analyzeResume(resumeText: string) {
       throw new Error("No response received from OpenAI");
     }
 
-    return JSON.parse(content);
+    const parsedContent = JSON.parse(content);
+    console.log("Successfully analyzed resume:", parsedContent);
+    return parsedContent;
   } catch (error) {
     console.error("Error analyzing resume:", error);
-    throw new Error(`Failed to analyze resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (error instanceof Error) {
+      if (error.message.includes("API key")) {
+        throw new Error("OpenAI API configuration error. Please check your API key.");
+      }
+      throw new Error(`Resume analysis failed: ${error.message}`);
+    }
+    throw new Error("An unexpected error occurred during resume analysis");
   }
 }
 
@@ -38,13 +55,24 @@ export async function getSkillGapAnalysis(
   targetRole: string
 ) {
   try {
-    console.log("Getting skill gap analysis...");
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key is not configured");
+    }
+
+    console.log("Starting skill gap analysis...");
+    console.log("Current skills:", currentSkills);
+    console.log("Target role:", targetRole);
+
+    if (!targetRole) {
+      throw new Error("Target role is required for skill gap analysis");
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "Analyze the skill gap between current skills and target role. Return results in JSON format with the following structure: { missingSkills: string[], recommendations: string[] }"
+          content: "Analyze the skill gap between current skills and target role. Return results in JSON format with the following structure: { missingSkills: string[], recommendations: string[] }. Each array should contain at least 2-3 items."
         },
         {
           role: "user",
@@ -59,9 +87,17 @@ export async function getSkillGapAnalysis(
       throw new Error("No response received from OpenAI");
     }
 
-    return JSON.parse(content);
+    const parsedContent = JSON.parse(content);
+    console.log("Successfully analyzed skill gap:", parsedContent);
+    return parsedContent;
   } catch (error) {
     console.error("Error analyzing skill gap:", error);
-    throw new Error(`Failed to analyze skill gap: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (error instanceof Error) {
+      if (error.message.includes("API key")) {
+        throw new Error("OpenAI API configuration error. Please check your API key.");
+      }
+      throw new Error(`Skill gap analysis failed: ${error.message}`);
+    }
+    throw new Error("An unexpected error occurred during skill gap analysis");
   }
 }

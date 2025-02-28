@@ -17,27 +17,34 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: async (text: string) => {
-      console.log("Uploading resume text:", text); // Debug log
+      if (!text.trim()) {
+        throw new Error("Please enter your resume content before analyzing");
+      }
+
+      console.log("Submitting resume for analysis...");
       const response = await apiRequest("POST", "/api/resume/analyze", { resumeText: text });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to analyze resume");
       }
+
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Resume analysis successful:", data);
       toast({
-        title: "Resume analyzed",
-        description: "Your resume has been successfully analyzed.",
+        title: "Resume analyzed successfully",
+        description: "Your skills and experience have been analyzed. Proceeding to recommendations.",
       });
       onComplete();
     },
     onError: (error) => {
-      console.error("Resume analysis error:", error); // Debug log
+      console.error("Resume analysis error:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to analyze resume",
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : "Failed to analyze resume. Please try again.",
       });
     },
   });
@@ -48,7 +55,7 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
         <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
         <h3 className="mt-4 text-lg font-semibold">Upload Your Resume</h3>
         <p className="text-sm text-muted-foreground mt-2">
-          Or paste your resume content below
+          Paste your resume content below for AI-powered analysis
         </p>
       </div>
 
@@ -64,14 +71,14 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
-            Failed to analyze resume. Please try again.
+            {error instanceof Error ? error.message : "Failed to analyze resume. Please try again."}
           </AlertDescription>
         </Alert>
       )}
 
       <Button
         onClick={() => mutate(resumeText)}
-        disabled={isPending || !resumeText}
+        disabled={isPending || !resumeText.trim()}
         className="w-full"
       >
         {isPending ? "Analyzing..." : "Analyze Resume"}
