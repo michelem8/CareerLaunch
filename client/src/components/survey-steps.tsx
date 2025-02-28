@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
 
 type SurveyStepsProps = {
   onComplete: () => void;
@@ -21,6 +20,15 @@ const INDUSTRIES = [
   { id: "education", label: "Education" },
   { id: "retail", label: "Retail" },
   { id: "manufacturing", label: "Manufacturing" },
+  { id: "consulting", label: "Consulting" },
+  { id: "media", label: "Media & Entertainment" },
+  { id: "nonprofit", label: "Non-Profit" },
+  { id: "government", label: "Government" },
+  { id: "energy", label: "Energy & Utilities" },
+  { id: "transportation", label: "Transportation & Logistics" },
+  { id: "real_estate", label: "Real Estate" },
+  { id: "hospitality", label: "Hospitality & Tourism" },
+  { id: "telecom", label: "Telecommunications" },
 ];
 
 const LEARNING_STYLES = [
@@ -29,6 +37,9 @@ const LEARNING_STYLES = [
   { id: "theoretical", label: "Theoretical Study" },
   { id: "collaborative", label: "Group Learning" },
   { id: "self-paced", label: "Self-Paced" },
+  { id: "interactive", label: "Interactive Workshops" },
+  { id: "mentorship", label: "One-on-One Mentorship" },
+  { id: "project_based", label: "Project-Based Learning" },
 ];
 
 export function SurveySteps({ onComplete }: SurveyStepsProps) {
@@ -108,36 +119,30 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
         <FormField
           control={form.control}
           name="preferences.preferredIndustries"
-          render={() => (
+          render={({ field }) => (
             <FormItem>
               <FormLabel>Industries of Interest</FormLabel>
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                {INDUSTRIES.map((industry) => (
-                  <FormField
-                    key={industry.id}
-                    control={form.control}
-                    name="preferences.preferredIndustries"
-                    render={({ field }) => (
-                      <FormItem key={industry.id} className="flex items-center space-x-3">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value?.includes(industry.id)}
-                            onCheckedChange={(checked) => {
-                              const value = field.value || [];
-                              if (checked) {
-                                field.onChange([...value, industry.id]);
-                              } else {
-                                field.onChange(value.filter((val) => val !== industry.id));
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">{industry.label}</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
+              <Select
+                onValueChange={(value) => {
+                  const selectedValues = value.split(",").filter(Boolean);
+                  field.onChange(selectedValues);
+                }}
+                value={field.value?.join(",")}
+                multiple
+              >
+                <FormControl>
+                  <SelectTrigger className="h-auto">
+                    <SelectValue placeholder="Select industries" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {INDUSTRIES.map((industry) => (
+                    <SelectItem key={industry.id} value={industry.id}>
+                      {industry.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -146,36 +151,30 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
         <FormField
           control={form.control}
           name="preferences.learningStyles"
-          render={() => (
+          render={({ field }) => (
             <FormItem>
               <FormLabel>Learning Styles</FormLabel>
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                {LEARNING_STYLES.map((style) => (
-                  <FormField
-                    key={style.id}
-                    control={form.control}
-                    name="preferences.learningStyles"
-                    render={({ field }) => (
-                      <FormItem key={style.id} className="flex items-center space-x-3">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value?.includes(style.id)}
-                            onCheckedChange={(checked) => {
-                              const value = field.value || [];
-                              if (checked) {
-                                field.onChange([...value, style.id]);
-                              } else {
-                                field.onChange(value.filter((val) => val !== style.id));
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <FormLabel className="font-normal">{style.label}</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
+              <Select
+                onValueChange={(value) => {
+                  const selectedValues = value.split(",").filter(Boolean);
+                  field.onChange(selectedValues);
+                }}
+                value={field.value?.join(",")}
+                multiple
+              >
+                <FormControl>
+                  <SelectTrigger className="h-auto">
+                    <SelectValue placeholder="Select learning styles" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {LEARNING_STYLES.map((style) => (
+                    <SelectItem key={style.id} value={style.id}>
+                      {style.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
