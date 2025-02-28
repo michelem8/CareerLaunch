@@ -7,19 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type SurveyStepsProps = {
   onComplete: () => void;
 };
 
 export function SurveySteps({ onComplete }: SurveyStepsProps) {
+  const { toast } = useToast();
+
   const form = useForm({
     resolver: zodResolver(surveySchema),
     defaultValues: {
       currentRole: "",
       targetRole: "",
       preferences: {
-        preferredIndustries: [],
+        preferredIndustries: ["technology"], // Default industry
         learningStyle: "",
         timeCommitment: "",
       },
@@ -28,9 +31,26 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: unknown) => {
-      await apiRequest("POST", "/api/survey", data);
+      const response = await apiRequest("POST", "/api/survey", data);
+      if (!response.ok) {
+        throw new Error("Failed to save survey data");
+      }
+      return response.json();
     },
-    onSuccess: onComplete,
+    onSuccess: () => {
+      toast({
+        title: "Survey completed",
+        description: "Your career preferences have been saved.",
+      });
+      onComplete();
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to save survey data",
+      });
+    },
   });
 
   return (
