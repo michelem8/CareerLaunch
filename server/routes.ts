@@ -8,12 +8,19 @@ import { z } from "zod";
 export async function registerRoutes(app: Express) {
   app.post("/api/survey", async (req, res) => {
     try {
-      const { currentRole, targetRole, preferences } = surveySchema.parse(req.body);
+      console.log("Received survey data:", req.body); // Debug log
+      const validatedData = surveySchema.parse(req.body);
       const userId = 1; // In a real app, get from session
-      const user = await storage.updateUserSurvey(userId, currentRole, targetRole, preferences);
+      const user = await storage.updateUserSurvey(
+        userId,
+        validatedData.currentRole,
+        validatedData.targetRole,
+        validatedData.preferences
+      );
       res.json(user);
     } catch (error) {
-      res.status(400).json({ error: "Invalid survey data" });
+      console.error("Survey validation error:", error); // Debug log
+      res.status(400).json({ error: error.message || "Invalid survey data" });
     }
   });
 
@@ -24,9 +31,9 @@ export async function registerRoutes(app: Express) {
 
       const analysis = await analyzeResume(resumeText);
       const user = await storage.updateUserResumeAnalysis(userId, analysis);
-      
+
       const skillGap = await getSkillGapAnalysis(analysis.skills, user.targetRole);
-      
+
       res.json({ user, skillGap });
     } catch (error) {
       res.status(400).json({ error: "Failed to analyze resume" });

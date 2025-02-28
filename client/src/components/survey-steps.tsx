@@ -22,7 +22,7 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
       currentRole: "",
       targetRole: "",
       preferences: {
-        preferredIndustries: ["technology"], // Default industry
+        preferredIndustries: ["technology"],
         learningStyle: "",
         timeCommitment: "",
       },
@@ -31,9 +31,11 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: unknown) => {
+      console.log("Submitting survey data:", data); // Debug log
       const response = await apiRequest("POST", "/api/survey", data);
       if (!response.ok) {
-        throw new Error("Failed to save survey data");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save survey data");
       }
       return response.json();
     },
@@ -45,6 +47,7 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
       onComplete();
     },
     onError: (error) => {
+      console.error("Survey submission error:", error); // Debug log
       toast({
         variant: "destructive",
         title: "Error",
