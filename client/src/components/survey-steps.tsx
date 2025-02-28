@@ -15,21 +15,22 @@ type SurveyStepsProps = {
 };
 
 const INDUSTRIES = [
-  { value: "technology", label: "Technology" },
+  { value: "popular", label: "Popular (Consumer-Facing Tech)" },
   { value: "healthcare", label: "Healthcare" },
-  { value: "finance", label: "Finance" },
+  { value: "ecommerce", label: "E-Commerce" },
   { value: "education", label: "Education" },
-  { value: "retail", label: "Retail" },
-  { value: "manufacturing", label: "Manufacturing" },
-  { value: "consulting", label: "Consulting" },
-  { value: "media", label: "Media & Entertainment" },
-  { value: "nonprofit", label: "Non-Profit" },
-  { value: "government", label: "Government" },
-  { value: "energy", label: "Energy & Utilities" },
-  { value: "transportation", label: "Transportation & Logistics" },
-  { value: "real_estate", label: "Real Estate" },
-  { value: "hospitality", label: "Hospitality & Tourism" },
-  { value: "telecom", label: "Telecommunications" },
+  { value: "enterprise-software", label: "Enterprise Software" },
+  { value: "marketplaces", label: "Marketplaces" },
+  { value: "fintech", label: "FinTech" },
+  { value: "ai-ml", label: "Artificial Intelligence & Machine Learning" },
+  { value: "cloud", label: "Cloud Computing & Infrastructure" },
+  { value: "cybersecurity", label: "Cybersecurity" },
+  { value: "iot", label: "Internet of Things (IoT)" },
+  { value: "ar-vr", label: "Augmented Reality (AR) & Virtual Reality (VR)" },
+  { value: "mobility-automotive", label: "Mobility & Automotive" },
+  { value: "robotics-automation", label: "Robotics & Automation" },
+  { value: "cleantech-sustainability", label: "CleanTech & Sustainability" },
+  { value: "martech-adtech", label: "Marketing Tech (MarTech) & Advertising Tech (AdTech)" },
 ];
 
 const LEARNING_STYLES = [
