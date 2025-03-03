@@ -6,7 +6,11 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from "@/components/ui/toast"
+  type ToastProps,
+  type ToastActionElement,
+} from "./toast-primitive"
+
+export { ToastProps, ToastActionElement }
 
 export function Toaster() {
   const { toasts } = useToast()

@@ -38,6 +38,11 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
+  // Add debug logging for value changes
+  React.useEffect(() => {
+    console.log("MultiSelect selected values:", selected);
+  }, [selected]);
+
   const selectedLabels = selected.map(
     (value) => options.find((option) => option.value === value)?.label
   ).filter(Boolean);

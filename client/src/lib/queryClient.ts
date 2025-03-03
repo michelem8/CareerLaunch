@@ -1,4 +1,8 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+/// <reference types="vite/client" />
+import { QueryClient, type QueryFunction } from "@tanstack/react-query";
+
+// Define the API base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,21 +11,26 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+export const apiRequest = async (method: string, path: string, body?: unknown) => {
+  const fullUrl = `${API_BASE_URL}${path}`;
+  console.log(`Making ${method} request to:`, fullUrl);
+  
+  try {
+    const response = await fetch(fullUrl, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: body ? JSON.stringify(body) : undefined,
+    });
 
-  await throwIfResNotOk(res);
-  return res;
-}
+    return response;
+  } catch (error) {
+    console.error(`API request failed:`, error);
+    throw error;
+  }
+};
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
@@ -29,7 +38,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    const url = queryKey[0] as string;
+    const fullUrl = `${API_BASE_URL}${url}`;
+    console.log("Making query to:", fullUrl);
+    
+    const res = await fetch(fullUrl, {
       credentials: "include",
     });
 

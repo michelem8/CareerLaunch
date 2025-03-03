@@ -45,8 +45,6 @@ const LEARNING_STYLES = [
 ];
 
 export function SurveySteps({ onComplete }: SurveyStepsProps) {
-  const { toast } = useToast();
-
   const form = useForm({
     resolver: zodResolver(surveySchema),
     defaultValues: {
@@ -71,25 +69,28 @@ export function SurveySteps({ onComplete }: SurveyStepsProps) {
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: "Survey completed",
-        description: "Your career preferences have been saved.",
-      });
       onComplete();
     },
     onError: (error) => {
       console.error("Survey submission error:", error); // Debug log
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to save survey data",
-      });
     },
   });
 
+  // Add debug logging for form state
+  console.log("Form state:", form.getValues());
+  console.log("Form errors:", form.formState.errors);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((data) => mutate(data))} className="space-y-6">
+      <form onSubmit={form.handleSubmit(
+        (data) => {
+          console.log("Form is valid, submitting data:", data);
+          mutate(data);
+        },
+        (errors) => {
+          console.log("Form validation errors:", errors);
+        }
+      )} className="space-y-6">
         <FormField
           control={form.control}
           name="currentRole"

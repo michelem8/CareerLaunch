@@ -3,17 +3,28 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/queryClient";
-import { AlertCircle, Upload } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type ResumeUploadProps = {
   onComplete: () => void;
 };
 
+interface SkillGapAnalysis {
+  missingSkills: string[];
+  recommendations: string[];
+}
+
+interface ResumeAnalysisResponse {
+  user: any;
+  skillGap: SkillGapAnalysis;
+}
+
 export function ResumeUpload({ onComplete }: ResumeUploadProps) {
   const [resumeText, setResumeText] = useState("");
-  const { toast } = useToast();
+  const [analysisResult, setAnalysisResult] = useState<SkillGapAnalysis | null>(null);
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: async (text: string) => {
@@ -27,39 +38,24 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
         throw new Error(errorData.error || "Failed to analyze resume");
       }
 
-      return response.json();
+      return response.json() as Promise<ResumeAnalysisResponse>;
     },
     onSuccess: (data) => {
       console.log("Resume analysis successful:", data);
-      toast({
-        title: "Resume analyzed successfully",
-        description: "Your skills and experience have been analyzed. Proceeding to recommendations.",
-      });
+      setAnalysisResult(data.skillGap);
       onComplete();
     },
     onError: (error) => {
       console.error("Resume analysis error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to analyze resume";
-
-      // Show a more specific message for billing-related errors
-      const isBillingError = errorMessage.includes("quota exceeded") || errorMessage.includes("billing");
-      const isServiceError = errorMessage.includes("configuration") || errorMessage.includes("try again");
-
-      toast({
-        variant: "destructive",
-        title: isBillingError ? "API Quota Exceeded" : isServiceError ? "Service Error" : "Analysis Failed",
-        description: errorMessage,
-      });
     },
   });
 
   return (
     <div className="space-y-6">
       <div className="text-center p-6 border-2 border-dashed rounded-lg">
-        <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-semibold">Upload Your Resume</h3>
+        <h3 className="text-lg font-semibold">Copy & Paste your Resume Text</h3>
         <p className="text-sm text-muted-foreground mt-2">
-          Paste your resume content below for AI-powered analysis
+          Copy the content of your resume and paste it below for AI-powered analysis
         </p>
       </div>
 
@@ -93,6 +89,12 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
       >
         {isPending ? "Analyzing..." : "Analyze Resume"}
       </Button>
+
+      {analysisResult && (
+        <div className="space-y-6">
+          {/* Removed "Continue to Course Recommendations" button */}
+        </div>
+      )}
     </div>
   );
 }

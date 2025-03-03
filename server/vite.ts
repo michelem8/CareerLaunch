@@ -22,14 +22,21 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+let viteInstance: any = null;
+
 export async function setupVite(app: Express, server: Server) {
+  if (viteInstance) {
+    app.use(viteInstance.middlewares);
+    return;
+  }
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
-    allowedHosts: true,
+    allowedHosts: ['localhost', '127.0.0.1'],
   };
 
-  const vite = await createViteServer({
+  viteInstance = await createViteServer({
     ...viteConfig,
     configFile: false,
     customLogger: {
@@ -43,9 +50,14 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
+  app.use(viteInstance.middlewares);
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+
+    // Skip API routes
+    if (url.startsWith('/api/')) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(
@@ -61,16 +73,22 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      const page = await viteInstance.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
+      viteInstance.ssrFixStacktrace(e as Error);
       next(e);
     }
   });
 }
 
+let staticInstance: any = null;
+
 export function serveStatic(app: Express) {
+  if (staticInstance) {
+    return;
+  }
+
   const distPath = path.resolve(__dirname, "public");
 
   if (!fs.existsSync(distPath)) {
@@ -81,8 +99,13 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // fall through to index.html if the file doesn't exist and it's not an API route
+  app.use("*", (req, res, next) => {
+    if (req.originalUrl.startsWith('/api/')) {
+      return next();
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
+
+  staticInstance = true;
 }

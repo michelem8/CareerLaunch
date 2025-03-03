@@ -1,46 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { SurveySteps } from "@/components/survey-steps";
 import { ResumeUpload } from "@/components/resume-upload";
-import { Progress } from "@/components/ui/progress"; 
+import { Progress } from "@/components/ui/progress";
 
 export default function Survey() {
-  const [step, setStep] = useState(1);
   const [, navigate] = useLocation();
   const totalSteps = 3;
+  const [currentStep, setCurrentStep] = useState(1);
 
-  // Initialize user mutation
-  const initUserMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/users", {
-        username: "demo_user", // For demo purposes
-        password: "demo_password"
-      });
-      if (!response.ok) {
-        throw new Error("Failed to initialize user");
+  // Get current user
+  const { data: user, isLoading: isLoadingUser, error: userError } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/users/me");
+        if (!response.ok) {
+          throw new Error("Failed to get user data");
+        }
+        return response.json();
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        return null;
       }
-      return response.json();
-    }
+    },
+    retry: false
   });
 
-  // Call initUser when component mounts
-  useState(() => {
-    initUserMutation.mutate();
-  }, []);
+  // Always start from step 1 if no user data
+  const step = currentStep;
 
-  const handleComplete = () => {
-    navigate("/dashboard");
+  // Handle completion of each step
+  const handleStepComplete = async () => {
+    setCurrentStep(prev => Math.min(prev + 1, totalSteps));
   };
 
-  if (initUserMutation.isPending) {
-    return <div>Initializing...</div>;
+  if (isLoadingUser) {
+    return <div className="min-h-screen bg-background flex items-center justify-center">
+      <p>Loading your profile...</p>
+    </div>;
   }
 
-  if (initUserMutation.error) {
-    return <div>Error initializing user profile. Please try again.</div>;
-  }
+  const handleComplete = async () => {
+    try {
+      await apiRequest("POST", "/api/survey/complete");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Failed to complete survey:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,11 +67,11 @@ export default function Survey() {
           </div>
 
           {step === 1 && (
-            <SurveySteps onComplete={() => setStep(2)} />
+            <SurveySteps onComplete={handleStepComplete} />
           )}
 
           {step === 2 && (
-            <ResumeUpload onComplete={() => setStep(3)} />
+            <ResumeUpload onComplete={handleStepComplete} />
           )}
 
           {step === 3 && (
@@ -77,9 +87,9 @@ export default function Survey() {
               />
               <button
                 onClick={handleComplete}
-                className="w-full bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
               >
-                View My Dashboard
+                Continue to Recommendations
               </button>
             </div>
           )}

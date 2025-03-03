@@ -11,7 +11,8 @@ export const users = pgTable("users", {
   skills: json("skills").$type<string[]>().default([]),
   resumeAnalysis: json("resume_analysis").$type<ResumeAnalysis>(),
   preferences: json("preferences").$type<UserPreferences>(),
-  hasCompletedSurvey: boolean("has_completed_survey").default(false),
+  hasCompletedSurvey: boolean("has_completed_survey").default(false).notNull(),
+  surveyStep: integer("survey_step").default(1).notNull(),
 });
 
 export const courses = pgTable("courses", {
@@ -19,8 +20,12 @@ export const courses = pgTable("courses", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
-  skills: json("skills").$type<string[]>().default([]),
+  skills: json("skills").$type<string[]>().notNull(),
   difficulty: text("difficulty").notNull(),
+  industry: text("industry").notNull(),
+  learningStyle: text("learning_style").notNull(),
+  timeCommitment: text("time_commitment").notNull(),
+  level: text("level").notNull(),
 });
 
 export type ResumeAnalysis = {
@@ -28,6 +33,8 @@ export type ResumeAnalysis = {
   experience: string[];
   education: string[];
   suggestedRoles: string[];
+  missingSkills: string[];
+  recommendations: string[];
 };
 
 export type UserPreferences = {
@@ -41,6 +48,16 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
 });
 
+export const courseSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  skills: z.array(z.string()),
+  imageUrl: z.string().optional(),
+});
+
+export type Course = z.infer<typeof courseSchema>;
+
 export const surveySchema = z.object({
   currentRole: z.string().min(1, "Current role is required"),
   targetRole: z.string().min(1, "Target role is required"),
@@ -51,6 +68,7 @@ export const surveySchema = z.object({
   }),
 });
 
+export type Survey = z.infer<typeof surveySchema>;
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
-export type Course = typeof courses.$inferSelect;
