@@ -6,25 +6,19 @@ interface Skill {
 }
 
 interface User {
+  currentRole: string | null;
+  targetRole: string | null;
+  skills: string[];
   resumeAnalysis?: {
     recommendations?: string[];
+    suggestedRoles?: string[];
+    skills?: string[];
+    missingSkills?: string[];
   };
 }
 
 interface CareerDashboardProps {
-  currentRole: {
-    title: string;
-    skills: Skill[];
-  };
-  targetRole: {
-    title: string;
-    skills: Skill[];
-  };
-  suggestedRole: {
-    title: string;
-    skills: Skill[];
-  };
-  user?: User;
+  user: User;
 }
 
 const SkillPill: React.FC<{ name: string }> = ({ name }) => (
@@ -34,7 +28,7 @@ const SkillPill: React.FC<{ name: string }> = ({ name }) => (
   </span>
 );
 
-const RoleCard: React.FC<{ title: string; subtitle?: string; skills: Skill[]; skillCount?: number }> = ({
+const RoleCard: React.FC<{ title: string; subtitle?: string; skills: string[]; skillCount?: number }> = ({
   title,
   subtitle,
   skills,
@@ -45,19 +39,20 @@ const RoleCard: React.FC<{ title: string; subtitle?: string; skills: Skill[]; sk
     {subtitle && <p className="text-gray-600 mb-4">{subtitle}</p>}
     <div className="mb-4">
       {skills.slice(0, 2).map((skill, index) => (
-        <SkillPill key={index} name={skill.name} />
+        <SkillPill key={index} name={skill} />
       ))}
-      {skillCount && <span className="text-gray-600 text-sm">+ {skillCount} {title === 'Suggested Role' ? 'roles' : 'skills'}</span>}
+      {skillCount && skillCount > 2 && (
+        <span className="text-gray-600 text-sm">+ {skillCount - 2} more {title === 'Suggested Roles' ? 'roles' : 'skills'}</span>
+      )}
     </div>
   </div>
 );
 
-const CareerDashboard: React.FC<CareerDashboardProps> = ({ 
-  currentRole, 
-  targetRole, 
-  suggestedRole,
-  user
-}) => {
+const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
+  const currentSkills = user.skills || [];
+  const suggestedRoles = user.resumeAnalysis?.suggestedRoles || [];
+  const missingSkills = user.resumeAnalysis?.missingSkills || [];
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Your Career Dashboard</h1>
@@ -65,23 +60,23 @@ const CareerDashboard: React.FC<CareerDashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <RoleCard
           title="Current Role"
-          subtitle={currentRole.title}
-          skills={currentRole.skills}
-          skillCount={17}
+          subtitle={user.currentRole || "Not set"}
+          skills={currentSkills}
+          skillCount={currentSkills.length}
         />
         
         <RoleCard
           title="Target Role"
-          subtitle={targetRole.title}
-          skills={targetRole.skills}
-          skillCount={10}
+          subtitle={user.targetRole || "Not set"}
+          skills={missingSkills}
+          skillCount={missingSkills.length}
         />
         
         <RoleCard
-          title="Suggested Role"
+          title="Suggested Roles"
           subtitle="Based on your skills"
-          skills={suggestedRole.skills}
-          skillCount={10}
+          skills={suggestedRoles}
+          skillCount={suggestedRoles.length}
         />
       </div>
 
@@ -89,7 +84,7 @@ const CareerDashboard: React.FC<CareerDashboardProps> = ({
         <h2 className="text-2xl font-semibold mb-4">Recommendations</h2>
         <div className="bg-white rounded-lg p-6 shadow-sm min-h-[600px] max-h-[800px] overflow-y-auto">
           <RecommendationsList 
-            recommendations={user?.resumeAnalysis?.recommendations ?? [
+            recommendations={user.resumeAnalysis?.recommendations ?? [
               "Focus on developing your system design skills through practical projects",
               "Take advanced courses in distributed systems and scalability",
               "Build experience with cloud platforms like AWS or Azure",

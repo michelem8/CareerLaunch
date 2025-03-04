@@ -6,6 +6,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserSurvey(userId: number, currentRole: string, targetRole: string, preferences: UserPreferences): Promise<User>;
   updateUserResumeAnalysis(userId: number, analysis: ResumeAnalysis): Promise<User>;
+  updateUserRoles(userId: number, currentRole: string, targetRole: string): Promise<User>;
   getCourses(): Promise<Course[]>;
   getCoursesBySkills(skills: string[]): Promise<Course[]>;
   completeUserSurvey(userId: number): Promise<User>;
@@ -150,8 +151,8 @@ export class MemStorage implements IStorage {
       currentRole,
       targetRole,
       preferences,
-      surveyStep: 2,
-      hasCompletedSurvey: false,
+      surveyStep: 3,
+      hasCompletedSurvey: true,
     };
     this.users.set(userId, updated);
     return updated;
@@ -185,6 +186,23 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
+  async updateUserRoles(
+    userId: number,
+    currentRole: string,
+    targetRole: string,
+  ): Promise<User> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+
+    const updated: User = {
+      ...user,
+      currentRole,
+      targetRole,
+    };
+    this.users.set(userId, updated);
+    return updated;
+  }
+
   async completeUserSurvey(userId: number): Promise<User> {
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
@@ -192,6 +210,16 @@ export class MemStorage implements IStorage {
     const updated: User = {
       ...user,
       hasCompletedSurvey: true,
+      surveyStep: 3,
+      // Preserve the existing resume analysis
+      resumeAnalysis: user.resumeAnalysis || {
+        skills: [],
+        experience: [],
+        education: [],
+        suggestedRoles: [],
+        missingSkills: [],
+        recommendations: []
+      }
     };
     this.users.set(userId, updated);
     return updated;

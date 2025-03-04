@@ -27,6 +27,7 @@ interface MultiSelectProps {
   onChange: (values: string[]) => void;
   placeholder?: string;
   emptyMessage?: string;
+  disabledOptions?: string[];
 }
 
 export function MultiSelect({
@@ -35,6 +36,7 @@ export function MultiSelect({
   onChange,
   placeholder = "Select options",
   emptyMessage = "No options found.",
+  disabledOptions = [],
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -91,12 +93,17 @@ export function MultiSelect({
               <CommandItem
                 key={option.value}
                 onSelect={() => {
+                  if (disabledOptions.includes(option.value)) return;
                   const isSelected = selected.includes(option.value);
                   const newSelected = isSelected
                     ? selected.filter((s) => s !== option.value)
                     : [...selected, option.value];
                   onChange(newSelected);
                 }}
+                disabled={disabledOptions.includes(option.value)}
+                className={cn(
+                  disabledOptions.includes(option.value) && "opacity-50 cursor-not-allowed"
+                )}
               >
                 <Check
                   className={cn(

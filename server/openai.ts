@@ -12,7 +12,31 @@ export async function analyzeResume(resumeText: string) {
       messages: [
         {
           role: "system",
-          content: "You are a career advisor specializing in analyzing resumes and suggesting career paths. Extract key information from the resume and return it in JSON format with the following structure: { skills: string[], experience: string[], education: string[], suggestedRoles: string[] }. When suggesting roles:\n1. Consider the person's current skills and experience\n2. Suggest 3-5 relevant roles that would be natural progression paths\n3. Include both lateral moves and upward career transitions\n4. Focus on roles that leverage their existing skills while offering growth opportunities",
+          content: `You are a career advisor specializing in analyzing resumes and suggesting career paths. Extract key information from the resume and return it in JSON format with the following structure: { skills: string[], experience: string[], education: string[], suggestedRoles: string[] }. 
+
+When suggesting roles, follow these guidelines:
+1. Analyze the person's current skills, experience level, and job history
+2. Suggest 3-5 roles that represent realistic next steps in their career progression
+3. Include both lateral moves and upward transitions that build on their existing experience
+4. Focus on roles that leverage their demonstrated skills and experience
+5. Consider industry-specific transitions that match their background
+6. Avoid suggesting senior technical roles (like Senior Product Manager) if they don't have relevant technical experience
+7. Prioritize roles that align with their most recent work experience and skill set
+
+For example:
+- For someone with administrative and customer service experience, suggest roles like:
+  * Office Manager
+  * Operations Coordinator
+  * Customer Success Manager
+  * Account Manager
+  * Administrative Team Lead
+
+- For someone with retail management experience, suggest roles like:
+  * District Manager
+  * Retail Operations Manager
+  * Customer Experience Manager
+  * Sales Team Lead
+  * Training and Development Manager`,
         },
         {
           role: "user",

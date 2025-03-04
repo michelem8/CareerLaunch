@@ -58,11 +58,27 @@ export const courseSchema = z.object({
 
 export type Course = z.infer<typeof courseSchema>;
 
+export const rolesSchema = z.object({
+  currentRole: z.string().min(1, "Current role is required"),
+  targetRole: z.string().min(1, "Target role is required"),
+});
+
 export const surveySchema = z.object({
   currentRole: z.string().min(1, "Current role is required"),
   targetRole: z.string().min(1, "Target role is required"),
   preferences: z.object({
-    preferredIndustries: z.array(z.string()).min(1, "Select at least one industry"),
+    preferredIndustries: z.array(z.string()).min(1, "Select at least one industry").refine(
+      (industries) => {
+        // If "any" is selected, it should be the only value
+        if (industries.includes("any")) {
+          return industries.length === 1;
+        }
+        return true;
+      },
+      {
+        message: "When 'Any industry' is selected, no other industries can be selected",
+      }
+    ),
     learningStyles: z.array(z.string()).min(1, "Select at least one learning style"),
     timeCommitment: z.string().min(1, "Time commitment is required"),
   }),

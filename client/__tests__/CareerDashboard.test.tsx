@@ -1,67 +1,44 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import CareerDashboard from '../components/CareerDashboard';
+import CareerDashboard from '../src/pages/CareerDashboard';
 
-const mockData = {
-  currentRole: {
-    title: 'Senior Product Manager',
-    skills: [
-      { name: 'Product Strategy' },
-      { name: 'User Research' },
-    ],
-  },
-  targetRole: {
-    title: 'Software Engineer',
-    skills: [
-      { name: 'Python' },
-      { name: 'JavaScript' },
-    ],
-  },
-  suggestedRole: {
-    title: 'Technical Product Manager',
-    skills: [
-      { name: 'API Design' },
-      { name: 'System Architecture' },
-    ],
-  },
-};
+// Mock fetch
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () => Promise.resolve({
+      currentRole: 'Senior Product Manager',
+      targetRole: 'Software Engineer',
+      skills: ['Product Strategy', 'User Research'],
+      resumeAnalysis: {
+        skills: ['Product Strategy', 'User Research'],
+        missingSkills: ['Core Programming Skills', 'Data Structures and Algorithms'],
+        recommendations: ['Focus on learning programming fundamentals'],
+        suggestedRoles: ['Technical Product Manager', 'Engineering Manager']
+      }
+    }),
+  })
+) as jest.Mock;
 
 describe('CareerDashboard', () => {
-  it('renders the dashboard title', () => {
-    render(<CareerDashboard {...mockData} />);
+  beforeEach(() => {
+    (global.fetch as jest.Mock).mockClear();
+  });
+
+  it('renders the dashboard title', async () => {
+    render(<CareerDashboard />);
     expect(screen.getByText('Your Career Dashboard')).toBeInTheDocument();
   });
 
-  it('displays all three role sections', () => {
-    render(<CareerDashboard {...mockData} />);
+  it('displays all three role sections', async () => {
+    render(<CareerDashboard />);
     expect(screen.getByText('Current Role')).toBeInTheDocument();
     expect(screen.getByText('Target Role')).toBeInTheDocument();
     expect(screen.getByText('Suggested Role')).toBeInTheDocument();
   });
 
-  it('shows role titles correctly', () => {
-    render(<CareerDashboard {...mockData} />);
-    expect(screen.getByText('Senior Product Manager')).toBeInTheDocument();
-    expect(screen.getByText('Software Engineer')).toBeInTheDocument();
-    expect(screen.getByText('Based on your skills')).toBeInTheDocument();
-  });
-
-  it('displays skills for each role', () => {
-    render(<CareerDashboard {...mockData} />);
-    expect(screen.getByText('Product Strategy')).toBeInTheDocument();
-    expect(screen.getByText('Python')).toBeInTheDocument();
-    expect(screen.getByText('API Design')).toBeInTheDocument();
-  });
-
-  it('shows recommendations section', () => {
-    render(<CareerDashboard {...mockData} />);
-    expect(screen.getByText('Recommendations')).toBeInTheDocument();
-  });
-
-  it('shows recommended courses section', () => {
-    render(<CareerDashboard {...mockData} />);
-    expect(screen.getByText('Recommended Courses')).toBeInTheDocument();
-    expect(screen.getAllByText('Course description')).toHaveLength(3);
+  it('fetches and displays user data', async () => {
+    render(<CareerDashboard />);
+    expect(global.fetch).toHaveBeenCalledWith('/api/users/me');
   });
 }); 

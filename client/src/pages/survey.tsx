@@ -29,12 +29,15 @@ export default function Survey() {
     retry: false
   });
 
-  // Always start from step 1 if no user data
-  const step = currentStep;
-
   // Handle completion of each step
   const handleStepComplete = async () => {
     setCurrentStep(prev => Math.min(prev + 1, totalSteps));
+  };
+
+  // Handle step changes from the SurveySteps component
+  const handleStepChange = (newStep: number) => {
+    console.log('Step changed to:', newStep); // Debug log
+    setCurrentStep(newStep);
   };
 
   if (isLoadingUser) {
@@ -60,21 +63,24 @@ export default function Survey() {
             <h1 className="text-3xl font-bold text-foreground mb-4">
               Career Profile Setup
             </h1>
-            <Progress value={(step / totalSteps) * 100} className="h-2" />
+            <Progress value={(currentStep / totalSteps) * 100} className="h-2" />
             <p className="text-sm text-muted-foreground mt-2">
-              Step {step} of {totalSteps}
+              Step {currentStep} of {totalSteps}
             </p>
           </div>
 
-          {step === 1 && (
-            <SurveySteps onComplete={handleStepComplete} />
+          {currentStep === 1 && (
+            <SurveySteps 
+              onComplete={handleStepComplete} 
+              onStepChange={handleStepChange}
+            />
           )}
 
-          {step === 2 && (
+          {currentStep === 2 && (
             <ResumeUpload onComplete={handleStepComplete} />
           )}
 
-          {step === 3 && (
+          {currentStep === 3 && (
             <div className="space-y-6 p-6 bg-card rounded-lg border">
               <h2 className="text-2xl font-semibold">Almost There!</h2>
               <p className="text-muted-foreground">
