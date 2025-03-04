@@ -159,12 +159,37 @@ const CourseRecommendations: React.FC<CourseRecommendationsProps> = ({ missingSk
 
   console.log('Relevant courses found:', relevantCourses);
 
+  // If we don't have at least 3 relevant courses, add some popular courses
+  let displayCourses = [...relevantCourses];
+  
+  if (displayCourses.length < 3) {
+    // Get courses not already in the relevantCourses list
+    const additionalCourses = COURSE_CATALOG.filter(
+      course => !displayCourses.some(rc => rc.id === course.id)
+    );
+    
+    // Sort by most general/popular courses - here we're using beginner difficulty as a proxy
+    additionalCourses.sort((a, b) => {
+      // Sort by difficulty (beginner first)
+      if (a.difficulty === 'beginner' && b.difficulty !== 'beginner') return -1;
+      if (a.difficulty !== 'beginner' && b.difficulty === 'beginner') return 1;
+      return 0;
+    });
+    
+    // Add enough additional courses to have at least 3 total
+    const neededCount = Math.max(0, 3 - displayCourses.length);
+    displayCourses = [
+      ...displayCourses,
+      ...additionalCourses.slice(0, neededCount)
+    ];
+  }
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Recommended Courses</h2>
-      {relevantCourses.length > 0 ? (
+      {displayCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {relevantCourses.map(course => (
+          {displayCourses.map(course => (
             <div
               key={course.id}
               data-testid="course-card"

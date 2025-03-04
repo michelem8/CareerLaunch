@@ -124,7 +124,6 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
       </div>
 
       <div className="mt-4">
-        <h2 className="text-2xl font-semibold mb-4">Recommended Courses</h2>
         <div className="bg-white rounded-lg p-6 shadow-sm">
           {missingSkills.length > 0 ? (
             <CourseRecommendations missingSkills={missingSkills} />
