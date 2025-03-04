@@ -1,23 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { RecommendationsList } from './RecommendationsList';
+import CourseRecommendations from './CourseRecommendations';
 
 interface Skill {
   name: string;
 }
 
-interface User {
+export interface User {
   currentRole: string | null;
   targetRole: string | null;
   skills: string[];
   resumeAnalysis?: {
-    recommendations?: string[];
-    suggestedRoles?: string[];
-    skills?: string[];
-    missingSkills?: string[];
+    skills: string[];
+    missingSkills: string[];
+    recommendations: string[];
+    suggestedRoles: string[];
   };
 }
 
-interface CareerDashboardProps {
+export interface CareerDashboardProps {
   user: User;
 }
 
@@ -28,30 +29,59 @@ const SkillPill: React.FC<{ name: string }> = ({ name }) => (
   </span>
 );
 
-const RoleCard: React.FC<{ title: string; subtitle?: string; skills: string[]; skillCount?: number }> = ({
+export const RoleCard: React.FC<{ title: string; subtitle?: string; skills: string[]; skillCount?: number }> = ({
   title,
   subtitle,
   skills,
   skillCount
-}) => (
-  <div className="bg-white rounded-lg p-6 shadow-sm">
-    <h2 className="text-2xl font-semibold mb-2">{title}</h2>
-    {subtitle && <p className="text-gray-600 mb-4">{subtitle}</p>}
-    <div className="mb-4">
-      {skills.slice(0, 2).map((skill, index) => (
-        <SkillPill key={index} name={skill} />
-      ))}
-      {skillCount && skillCount > 2 && (
-        <span className="text-gray-600 text-sm">+ {skillCount - 2} more {title === 'Suggested Roles' ? 'roles' : 'skills'}</span>
-      )}
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  const toggleExpanded = () => {
+    setExpanded(!expanded);
+  };
+  
+  const visibleSkills = expanded ? skills : skills.slice(0, 2);
+  
+  return (
+    <div className="bg-white rounded-lg p-6 shadow-sm">
+      <h2 className="text-2xl font-semibold mb-2">{title}</h2>
+      {subtitle && <p className="text-gray-600 mb-4">{subtitle}</p>}
+      <div className="mb-4">
+        {visibleSkills.map((skill, index) => (
+          <SkillPill key={index} name={skill} />
+        ))}
+        {skillCount && skillCount > 2 && !expanded && (
+          <button 
+            onClick={toggleExpanded}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
+          >
+            + {skillCount - 2} more {title === 'Suggested Roles' ? 'roles' : 'skills'}
+          </button>
+        )}
+        {expanded && skills.length > 2 && (
+          <button 
+            onClick={toggleExpanded}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer block mt-2"
+          >
+            Show less
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
+export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   const currentSkills = user.skills || [];
   const suggestedRoles = user.resumeAnalysis?.suggestedRoles || [];
   const missingSkills = user.resumeAnalysis?.missingSkills || [];
+  const recommendations = user.resumeAnalysis?.recommendations || [];
+  
+  console.log('CareerDashboard - user data:', user);
+  console.log('CareerDashboard - recommendations:', recommendations);
+  console.log('CareerDashboard - missingSkills:', missingSkills);
+  console.log('CareerDashboard - resumeAnalysis exists:', !!user.resumeAnalysis);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -82,37 +112,27 @@ const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
 
       <div className="mt-8">
         <h2 className="text-2xl font-semibold mb-4">Recommendations</h2>
-        <div className="bg-white rounded-lg p-6 shadow-sm min-h-[600px] max-h-[800px] overflow-y-auto">
-          <RecommendationsList 
-            recommendations={user.resumeAnalysis?.recommendations ?? [
-              "Focus on developing your system design skills through practical projects",
-              "Take advanced courses in distributed systems and scalability",
-              "Build experience with cloud platforms like AWS or Azure",
-              "Practice leadership skills by mentoring junior developers",
-              "Contribute to open-source projects to demonstrate expertise",
-              "Develop communication skills through technical presentations",
-              "Stay updated with latest industry trends and technologies"
-            ]} 
-          />
+        <div className="bg-white rounded-lg p-6 shadow-sm min-h-[300px] max-h-[800px] overflow-y-auto">
+          {user.resumeAnalysis?.recommendations && user.resumeAnalysis.recommendations.length > 0 ? (
+            <RecommendationsList recommendations={recommendations} />
+          ) : (
+            <div className="text-gray-500 italic">
+              No recommendations available. Please complete your profile to get personalized recommendations.
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-4">
         <h2 className="text-2xl font-semibold mb-4">Recommended Courses</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((course) => (
-            <div key={course} className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="h-48 bg-gray-200"></div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2">Course {course}</h3>
-                <p className="text-gray-600 mb-4">Course description</p>
-                <div className="flex flex-wrap gap-2">
-                  <SkillPill name="Skill" />
-                  <SkillPill name="Skill" />
-                </div>
-              </div>
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          {missingSkills.length > 0 ? (
+            <CourseRecommendations missingSkills={missingSkills} />
+          ) : (
+            <div className="text-gray-500 italic">
+              No courses available. Please complete your profile to get personalized course recommendations.
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

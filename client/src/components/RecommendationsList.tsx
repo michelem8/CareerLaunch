@@ -9,13 +9,25 @@ export const RecommendationsList: React.FC<RecommendationsListProps> = ({ recomm
   const initialDisplayCount = 3;
   const hasMoreItems = recommendations.length > initialDisplayCount;
   
+  console.log('RecommendationsList - received recommendations:', recommendations);
+  console.log('RecommendationsList - has recommendations:', recommendations.length > 0);
+  
   const displayedRecommendations = isExpanded 
     ? recommendations 
     : recommendations.slice(0, initialDisplayCount);
 
+  // If there are no recommendations, show a message
+  if (recommendations.length === 0) {
+    return (
+      <div className="text-gray-500 italic">
+        No recommendations available. Complete your profile to receive personalized recommendations.
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <ul className="list-disc pl-6 space-y-4 text-lg">
+    <div className="space-y-2">
+      <ul className="list-disc pl-6 space-y-2 text-lg">
         {displayedRecommendations.map((recommendation, index) => (
           <li key={index} className="text-gray-700">
             {recommendation}
@@ -24,7 +36,7 @@ export const RecommendationsList: React.FC<RecommendationsListProps> = ({ recomm
       </ul>
       
       {hasMoreItems && (
-        <div className="mt-6">
+        <div className="mt-3">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
