@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/queryClient";
@@ -25,6 +25,7 @@ interface ResumeAnalysisResponse {
 export function ResumeUpload({ onComplete }: ResumeUploadProps) {
   const [resumeText, setResumeText] = useState("");
   const [analysisResult, setAnalysisResult] = useState<SkillGapAnalysis | null>(null);
+  const queryClient = useQueryClient();
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: async (text: string) => {
@@ -43,6 +44,7 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
     onSuccess: (data) => {
       console.log("Resume analysis successful:", data);
       setAnalysisResult(data.skillGap);
+      queryClient.invalidateQueries({ queryKey: ['user'] });
       onComplete();
     },
     onError: (error) => {

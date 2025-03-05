@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { surveySchema, rolesSchema } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -60,6 +60,7 @@ const LEARNING_STYLES = [
 export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const totalSteps = 3;
 
   const updateStep = (step: Step) => {
@@ -97,6 +98,7 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
     onSuccess: (data) => {
       // Only call onComplete when we have all the data (step 3)
       if (currentStep === 3) {
+        queryClient.invalidateQueries({ queryKey: ['user'] });
         onComplete();
       }
     },
@@ -147,6 +149,7 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
     },
     onSuccess: (data) => {
       console.log("Successfully saved roles:", data);
+      queryClient.invalidateQueries({ queryKey: ['user'] });
       toast({
         title: "Success",
         description: "Your roles have been saved.",

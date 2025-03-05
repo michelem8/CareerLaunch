@@ -27,6 +27,7 @@ export class MemStorage implements IStorage {
   }
 
   private initializeCourses() {
+    console.log("Initializing courses...");
     const sampleCourses: Course[] = [
       {
         id: 1,
@@ -78,63 +79,44 @@ export class MemStorage implements IStorage {
       },
     ];
 
-    sampleCourses.forEach(course => this.courses.set(course.id, course));
+    console.log("Sample courses created:", sampleCourses);
+    sampleCourses.forEach(course => {
+      console.log(`Adding course to storage: ${course.title}`);
+      this.courses.set(course.id, course);
+    });
+    console.log("Finished initializing courses. Total courses:", this.courses.size);
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    console.log(`Getting user with id: ${id}`);
+    console.log("Getting user with id:", id);
     const user = this.users.get(id);
-    console.log(`Found user:`, user);
+    console.log("Found user:", user);
     return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    console.log(`Getting user by username: ${username}`);
-    const user = Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-    console.log(`Found user:`, user);
+    console.log("Getting user by username:", username);
+    const user = Array.from(this.users.values()).find(u => u.username === username);
+    console.log("Found user:", user);
     return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    try {
-      console.log("Creating new user with data:", insertUser);
-      
-      // Check if user with this username already exists
-      const existingUser = await this.getUserByUsername(insertUser.username);
-      if (existingUser) {
-        // If user exists, return it instead of creating a new one
-        console.log("User already exists, returning existing user:", existingUser);
-        return existingUser;
-      }
-      
-      const id = this.currentId++;
-      const user: User = {
-        ...insertUser,
-        id,
-        currentRole: null,
-        targetRole: null,
-        skills: [],
-        resumeAnalysis: null,
-        preferences: null,
-        hasCompletedSurvey: false,
-        surveyStep: 1,
-      };
-
-      console.log("Initialized new user state:", user);
-      this.users.set(id, user);
-      
-      const createdUser = await this.getUser(id);
-      if (!createdUser) {
-        throw new Error("Failed to create user - user not found after creation");
-      }
-      
-      return createdUser;
-    } catch (error) {
-      console.error("Error creating user:", error);
-      throw error;
-    }
+  async createUser(userData: InsertUser): Promise<User> {
+    console.log("Creating new user with data:", userData);
+    const user: User = {
+      ...userData,
+      id: this.currentId++,
+      currentRole: null,
+      targetRole: null,
+      skills: [],
+      resumeAnalysis: null,
+      preferences: null,
+      hasCompletedSurvey: false,
+      surveyStep: 1
+    };
+    console.log("Initialized new user state:", user);
+    this.users.set(user.id, user);
+    return user;
   }
 
   async updateUserSurvey(
@@ -143,6 +125,7 @@ export class MemStorage implements IStorage {
     targetRole: string,
     preferences: UserPreferences,
   ): Promise<User> {
+    console.log("Updating user survey data:", { userId, currentRole, targetRole, preferences });
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
 
@@ -152,9 +135,9 @@ export class MemStorage implements IStorage {
       targetRole,
       preferences,
       surveyStep: 3,
-      hasCompletedSurvey: true,
     };
     this.users.set(userId, updated);
+    console.log("Updated user state after survey:", updated);
     return updated;
   }
 
@@ -162,6 +145,7 @@ export class MemStorage implements IStorage {
     userId: number,
     analysis: ResumeAnalysis,
   ): Promise<User> {
+    console.log("Updating user resume analysis:", { userId, analysis });
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
 
@@ -183,6 +167,7 @@ export class MemStorage implements IStorage {
       hasCompletedSurvey: true,
     };
     this.users.set(userId, updated);
+    console.log("Updated user state after resume analysis:", updated);
     return updated;
   }
 
@@ -191,6 +176,7 @@ export class MemStorage implements IStorage {
     currentRole: string,
     targetRole: string,
   ): Promise<User> {
+    console.log("Updating user roles:", { userId, currentRole, targetRole });
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
 
@@ -198,12 +184,15 @@ export class MemStorage implements IStorage {
       ...user,
       currentRole,
       targetRole,
+      surveyStep: 2,
     };
     this.users.set(userId, updated);
+    console.log("Updated user state after roles update:", updated);
     return updated;
   }
 
   async completeUserSurvey(userId: number): Promise<User> {
+    console.log("Completing user survey:", userId);
     const user = await this.getUser(userId);
     if (!user) throw new Error("User not found");
 
@@ -222,15 +211,20 @@ export class MemStorage implements IStorage {
       }
     };
     this.users.set(userId, updated);
+    console.log("Updated user state after survey completion:", updated);
     return updated;
   }
 
   async getCourses(): Promise<Course[]> {
-    return Array.from(this.courses.values());
+    console.log("Getting all courses...");
+    const courses = Array.from(this.courses.values());
+    console.log("Retrieved courses:", courses);
+    return courses;
   }
 
   async getCoursesBySkills(skills: string[]): Promise<Course[]> {
-    return Array.from(this.courses.values()).filter(course =>
+    console.log("Getting courses by skills:", skills);
+    const courses = Array.from(this.courses.values()).filter(course =>
       course.skills.some(skill =>
         skills.some(userSkill =>
           userSkill.toLowerCase().includes(skill.toLowerCase()) ||
@@ -238,6 +232,8 @@ export class MemStorage implements IStorage {
         )
       )
     );
+    console.log("Found courses matching skills:", courses);
+    return courses;
   }
 }
 

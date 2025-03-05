@@ -28,63 +28,70 @@ export const courses = pgTable("courses", {
   level: text("level").notNull(),
 });
 
-export type ResumeAnalysis = {
-  skills: string[];
-  experience: string[];
-  education: string[];
-  suggestedRoles: string[];
-  missingSkills: string[];
-  recommendations: string[];
-};
-
-export type UserPreferences = {
-  preferredIndustries: string[];
-  learningStyles: string[];  
-  timeCommitment: string;
-};
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
 export const courseSchema = z.object({
-  id: z.string(),
+  id: z.union([z.number(), z.string()]),
   title: z.string(),
   description: z.string(),
+  platform: z.string(),
+  difficulty: z.enum(["Beginner", "Intermediate", "Advanced"]),
+  duration: z.string(),
   skills: z.array(z.string()),
-  imageUrl: z.string().optional(),
+  url: z.string(),
+  price: z.string().optional(),
+  rating: z.number().optional(),
+  aiMatchScore: z.number().optional()
 });
 
 export type Course = z.infer<typeof courseSchema>;
 
-export const rolesSchema = z.object({
-  currentRole: z.string().min(1, "Current role is required"),
-  targetRole: z.string().min(1, "Target role is required"),
+export const userPreferencesSchema = z.object({
+  preferredIndustries: z.array(z.string()),
+  learningStyles: z.array(z.string()),
+  timeCommitment: z.string()
 });
 
-export const surveySchema = z.object({
-  currentRole: z.string().min(1, "Current role is required"),
-  targetRole: z.string().min(1, "Target role is required"),
-  preferences: z.object({
-    preferredIndustries: z.array(z.string()).min(1, "Select at least one industry").refine(
-      (industries) => {
-        // If "any" is selected, it should be the only value
-        if (industries.includes("any")) {
-          return industries.length === 1;
-        }
-        return true;
-      },
-      {
-        message: "When 'Any industry' is selected, no other industries can be selected",
-      }
-    ),
-    learningStyles: z.array(z.string()).min(1, "Select at least one learning style"),
-    timeCommitment: z.string().min(1, "Time commitment is required"),
-  }),
+export type UserPreferences = z.infer<typeof userPreferencesSchema>;
+
+export const resumeAnalysisSchema = z.object({
+  skills: z.array(z.string()),
+  experience: z.array(z.string()),
+  education: z.array(z.string()),
+  suggestedRoles: z.array(z.string()),
+  missingSkills: z.array(z.string()),
+  recommendations: z.array(z.string())
 });
 
-export type Survey = z.infer<typeof surveySchema>;
+export type ResumeAnalysis = z.infer<typeof resumeAnalysisSchema>;
+
+export const userSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  password: z.string(),
+  currentRole: z.string().nullable(),
+  targetRole: z.string().nullable(),
+  skills: z.array(z.string()),
+  preferences: userPreferencesSchema.nullable(),
+  resumeAnalysis: resumeAnalysisSchema.nullable(),
+  hasCompletedSurvey: z.boolean(),
+  surveyStep: z.number()
+});
+
+export type User = z.infer<typeof userSchema>;
+
+export const insertUserSchema = z.object({
+  username: z.string(),
+  password: z.string()
+});
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+
+export const surveySchema = z.object({
+  currentRole: z.string(),
+  targetRole: z.string(),
+  preferences: userPreferencesSchema
+});
+
+export const rolesSchema = z.object({
+  currentRole: z.string(),
+  targetRole: z.string()
+});

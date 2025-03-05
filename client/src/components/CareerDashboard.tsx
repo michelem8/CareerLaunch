@@ -32,7 +32,7 @@ const SkillPill: React.FC<{ name: string }> = ({ name }) => (
 export const RoleCard: React.FC<{ title: string; subtitle?: string; skills: string[]; skillCount?: number }> = ({
   title,
   subtitle,
-  skills,
+  skills = [],
   skillCount
 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -41,25 +41,25 @@ export const RoleCard: React.FC<{ title: string; subtitle?: string; skills: stri
     setExpanded(!expanded);
   };
   
-  const visibleSkills = expanded ? skills : skills.slice(0, 2);
+  const visibleSkills = expanded || !skills?.length ? skills : skills.slice(0, 2);
   
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm">
       <h2 className="text-2xl font-semibold mb-2">{title}</h2>
       {subtitle && <p className="text-gray-600 mb-4">{subtitle}</p>}
       <div className="mb-4">
-        {visibleSkills.map((skill, index) => (
-          <SkillPill key={index} name={skill} />
+        {Array.isArray(visibleSkills) && visibleSkills.map((skill, index) => (
+          <SkillPill key={`${skill}-${index}`} name={skill} />
         ))}
-        {skillCount && skillCount > 2 && !expanded && (
+        {Array.isArray(skills) && skills.length > 2 && !expanded && (
           <button 
             onClick={toggleExpanded}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
           >
-            + {skillCount - 2} more {title === 'Suggested Roles' ? 'roles' : 'skills'}
+            + {skills.length - 2} more {title === 'Suggested Roles' ? 'roles' : 'skills'}
           </button>
         )}
-        {expanded && skills.length > 2 && (
+        {expanded && Array.isArray(skills) && skills.length > 2 && (
           <button 
             onClick={toggleExpanded}
             className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer block mt-2"

@@ -198,23 +198,46 @@ export async function registerRoutes(app: Express) {
       const user = await storage.getUser(userId);
       if (!user) throw new Error("User not found");
 
-      // Get all available courses
-      const courses = await storage.getCourses();
+      // Get skills from query parameters and ensure they are strings
+      const requestedSkills = req.query.skills;
+      const missingSkills: string[] = Array.isArray(requestedSkills)
+        ? requestedSkills.map(skill => String(skill))
+        : requestedSkills
+          ? [String(requestedSkills)]
+          : [];
 
-      // Get personalized recommendations
-      const recommendations = await getRecommendedCourses(user, courses);
+      // Update user's missing skills for this request
+      if (user.resumeAnalysis) {
+        user.resumeAnalysis.missingSkills = missingSkills;
+      } else {
+        user.resumeAnalysis = {
+          skills: user.skills || [],
+          experience: [],
+          education: [],
+          missingSkills,
+          recommendations: [],
+          suggestedRoles: []
+        };
+      }
+
+      // Get personalized recommendations using OpenAI
+      const recommendations = await getRecommendedCourses(user);
       
       console.log("Generated recommendations for user:", {
         userId,
         currentRole: user.currentRole,
         targetRole: user.targetRole,
+        requestedSkills: missingSkills,
         recommendationCount: recommendations.length
       });
 
       res.json(recommendations);
     } catch (error) {
       console.error("Failed to get course recommendations:", error);
-      res.status(400).json({ error: "Failed to get course recommendations" });
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to get course recommendations",
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      });
     }
   });
 
