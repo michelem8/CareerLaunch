@@ -68,6 +68,12 @@ async function initializeDefaultUser() {
 (async () => {
   try {
     await initializeDefaultUser();
+    
+    // Add health check endpoint
+    app.get('/api/health', (req, res) => {
+      res.status(200).json({ status: 'healthy' });
+    });
+
     // Register API routes first
     const httpServer = await registerRoutes(app);
 
@@ -80,35 +86,18 @@ async function initializeDefaultUser() {
       });
     });
 
-    // Setup Vite or static files for non-API routes
+    // Setup static file serving
     if (process.env.NODE_ENV === 'development') {
-      app.use(/^(?!\/api\/).+/, async (req, res, next) => {
-        try {
-          await setupVite(app, httpServer);
-          next();
-        } catch (error) {
-          next(error);
-        }
-      });
+      await setupVite(app, httpServer);
     } else {
-      app.use(/^(?!\/api\/).+/, (req, res, next) => {
-        try {
-          serveStatic(app);
-          next();
-        } catch (error) {
-          next(error);
-        }
-      });
+      // Serve static files in production
+      serveStatic(app);
     }
-
-    // Add health check endpoint
-    app.get('/api/health', (req, res) => {
-      res.status(200).json({ status: 'healthy' });
-    });
 
     // Start the server
     httpServer.listen(port, '0.0.0.0', () => {
       console.log(`Server running at http://localhost:${port}`);
+      console.log('Environment:', process.env.NODE_ENV);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

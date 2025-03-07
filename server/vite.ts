@@ -1,10 +1,7 @@
 import express, { type Express } from "express";
 import fs from "fs";
-import path, { dirname } from "path";
-import { fileURLToPath } from "url";
+import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
@@ -60,14 +57,7 @@ export async function setupVite(app: Express, server: Server) {
     }
 
     try {
-      const clientTemplate = path.resolve(
-        __dirname,
-        "..",
-        "client",
-        "index.html",
-      );
-
-      // always reload the index.html file from disk incase it changes
+      const clientTemplate = path.resolve(process.cwd(), "client", "index.html");
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
@@ -89,26 +79,35 @@ export function serveStatic(app: Express) {
     return;
   }
 
-  const distPath = path.resolve(__dirname, "public");
-  console.log('Serving static files from:', distPath);
+  // In production, serve from the dist/public directory
+  const publicPath = path.resolve(process.cwd(), "dist", "public");
+  console.log('Serving static files from:', publicPath);
 
-  if (!fs.existsSync(distPath)) {
-    console.error(`Could not find the build directory: ${distPath}`);
-    console.log('Current directory contents:', fs.readdirSync(__dirname));
+  if (!fs.existsSync(publicPath)) {
+    console.error(`Could not find the public directory: ${publicPath}`);
+    console.log('Current directory contents:', fs.readdirSync(process.cwd()));
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+      `Could not find the public directory: ${publicPath}, make sure to build the client first`,
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static files
+  app.use(express.static(publicPath));
 
-  // fall through to index.html if the file doesn't exist and it's not an API route
+  // Serve index.html for all non-API routes
   app.use("*", (req, res, next) => {
     if (req.originalUrl.startsWith('/api/')) {
       return next();
     }
-    const indexPath = path.resolve(distPath, "index.html");
+    
+    const indexPath = path.join(publicPath, "index.html");
     console.log('Serving index.html from:', indexPath);
+    
+    if (!fs.existsSync(indexPath)) {
+      console.error('index.html not found at:', indexPath);
+      return next(new Error('index.html not found'));
+    }
+    
     res.sendFile(indexPath);
   });
 
