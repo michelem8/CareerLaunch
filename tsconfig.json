@@ -14,8 +14,9 @@
     "paths": {
       "@/*": ["src/*"],
       "@shared/*": ["shared/*"]
-    }
+    },
+    "resolveJsonModule": true
   },
   "include": ["server/**/*", "shared/**/*", "*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
