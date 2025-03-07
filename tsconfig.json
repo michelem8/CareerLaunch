@@ -15,7 +15,8 @@
       "@/*": ["src/*"],
       "@shared/*": ["shared/*"]
     },
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowJs": true
   },
   "include": ["server/**/*", "shared/**/*", "*.ts"],
   "exclude": ["node_modules", "dist"]
