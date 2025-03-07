@@ -23,7 +23,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: '../dist/public',
+    emptyOutDir: true,
     sourcemap: true,
     rollupOptions: {
       output: {
