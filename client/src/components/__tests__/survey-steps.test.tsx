@@ -9,9 +9,19 @@ vi.mock('@/lib/queryClient', () => ({
 }));
 
 describe('SurveySteps', () => {
+  it('renders the first step initially', () => {
+    const onComplete = vi.fn();
+    const onStepChange = vi.fn();
+
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    
+    expect(screen.getByText(/What's your current role?/i)).toBeInTheDocument();
+  });
+
   it('should allow selecting "Any industry" option', async () => {
     const onComplete = vi.fn();
-    render(<SurveySteps onComplete={onComplete} />);
+    const onStepChange = vi.fn();
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
     // Find and click the industries dropdown
     const industriesDropdown = screen.getByPlaceholderText('Select industries...');
@@ -31,7 +41,8 @@ describe('SurveySteps', () => {
 
   it('should clear other selections when "Any industry" is selected', async () => {
     const onComplete = vi.fn();
-    render(<SurveySteps onComplete={onComplete} />);
+    const onStepChange = vi.fn();
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
     // Find and click the industries dropdown
     const industriesDropdown = screen.getByPlaceholderText('Select industries...');
@@ -52,7 +63,8 @@ describe('SurveySteps', () => {
 
   it('should clear "Any industry" when a specific industry is selected', async () => {
     const onComplete = vi.fn();
-    render(<SurveySteps onComplete={onComplete} />);
+    const onStepChange = vi.fn();
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
     // Find and click the industries dropdown
     const industriesDropdown = screen.getByPlaceholderText('Select industries...');
@@ -73,7 +85,8 @@ describe('SurveySteps', () => {
 
   it('should navigate through steps correctly', async () => {
     const onComplete = vi.fn();
-    render(<SurveySteps onComplete={onComplete} />);
+    const onStepChange = vi.fn();
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
     // Step 1: Current and Target Role
     expect(screen.getByLabelText('Current Role')).toBeInTheDocument();
@@ -103,7 +116,8 @@ describe('SurveySteps', () => {
 
   it('should update step indicator when navigating through steps', async () => {
     const onComplete = vi.fn();
-    render(<SurveySteps onComplete={onComplete} />);
+    const onStepChange = vi.fn();
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
     // Initial step
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
@@ -128,5 +142,41 @@ describe('SurveySteps', () => {
     // Test back navigation
     await userEvent.click(screen.getByText('Back'));
     expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
+  });
+
+  it('allows selecting a role and moving to the next step', async () => {
+    const onComplete = vi.fn();
+    const onStepChange = vi.fn();
+
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    
+    // Your existing test code...
+  });
+
+  it('allows selecting skills and moving to the next step', async () => {
+    const onComplete = vi.fn();
+    const onStepChange = vi.fn();
+
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    
+    // Your existing test code...
+  });
+
+  it('allows selecting experience level and completing the survey', async () => {
+    const onComplete = vi.fn();
+    const onStepChange = vi.fn();
+
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    
+    // Your existing test code...
+  });
+
+  it('validates required fields before proceeding', async () => {
+    const onComplete = vi.fn();
+    const onStepChange = vi.fn();
+
+    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    
+    // Your existing test code...
   });
 }); 

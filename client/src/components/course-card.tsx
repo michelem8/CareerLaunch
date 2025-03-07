@@ -2,19 +2,32 @@ import { type Course } from "@shared/schema";
 import { Card } from "./ui/card";
 import { Badge } from "@/components/ui/badge";
 
-type CourseCardProps = {
-  course: Course;
-};
+interface CourseCardProps {
+  course: {
+    title?: string;
+    id?: string | number;
+    duration?: string;
+    url?: string;
+    description?: string;
+    skills?: string[];
+    difficulty?: "Beginner" | "Intermediate" | "Advanced";
+    platform?: string;
+    price?: string;
+    rating?: number;
+    aiMatchScore?: number;
+    imageUrl?: string;
+  };
+}
 
-export const CourseCard = ({ course }: CourseCardProps) => {
+export function CourseCard({ course }: CourseCardProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="w-full">
       {course.imageUrl && (
-        <div className="h-48 bg-gray-200">
+        <div className="relative w-full pt-[56.25%]">
           <img
             src={course.imageUrl}
             alt={course.title}
-            className="w-full h-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         </div>
       )}
@@ -34,4 +47,4 @@ export const CourseCard = ({ course }: CourseCardProps) => {
       </div>
     </Card>
   );
-};
+}
