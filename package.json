@@ -53,6 +53,7 @@
     "@types/cors": "^2.8.17",
     "@types/natural": "^5.1.5",
     "@types/puppeteer": "^5.4.7",
+    "@vercel/analytics": "^1.5.0",
     "axios": "^1.8.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
