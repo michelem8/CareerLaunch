@@ -90,8 +90,11 @@ export function serveStatic(app: Express) {
   }
 
   const distPath = path.resolve(__dirname, "public");
+  console.log('Serving static files from:', distPath);
 
   if (!fs.existsSync(distPath)) {
+    console.error(`Could not find the build directory: ${distPath}`);
+    console.log('Current directory contents:', fs.readdirSync(__dirname));
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
@@ -104,7 +107,9 @@ export function serveStatic(app: Express) {
     if (req.originalUrl.startsWith('/api/')) {
       return next();
     }
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const indexPath = path.resolve(distPath, "index.html");
+    console.log('Serving index.html from:', indexPath);
+    res.sendFile(indexPath);
   });
 
   staticInstance = true;
