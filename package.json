@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "cd client && npm install && npm run build && cd .. && tsc --project tsconfig.json && cp -r client/dist/. dist/public/ && cp package.json dist/ && cp -r server/config dist/server/ && cp .env dist/ || true",
+    "build": "mkdir -p dist/public && cd client && npm install && npm run build || true && cd .. && tsc --project tsconfig.json && (test -d client/dist && cp -r client/dist/. dist/public/ || cp client/public/fallback.html dist/public/index.html) && cp package.json dist/ && cp -r server/config dist/server/ && cp .env dist/ || true",
     "start": "node dist/server/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",

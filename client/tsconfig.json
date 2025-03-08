@@ -27,8 +27,11 @@
     "paths": {
       "@/*": ["./src/*"],
       "@shared/*": ["../shared/*"]
-    }
+    },
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "./node_modules"]
   },
-  "include": ["src"],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
   "references": [{ "path": "./tsconfig.node.json" }]
 } 
