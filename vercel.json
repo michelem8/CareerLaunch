@@ -2,24 +2,15 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "builds": [
-    {
-      "src": "dist/server/index.js",
-      "use": "@vercel/node"
+  "functions": {
+    "dist/server/index.js": {
+      "memory": 1024,
+      "maxDuration": 10
     }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/dist/server/index.js"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/server/index.js"
-    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/dist/server/index.js" },
+    { "source": "/(.*)", "destination": "/dist/server/index.js" }
   ],
   "env": {
     "NODE_ENV": "production"

@@ -4,11 +4,11 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import cors from "cors";
 import path from "path";
-import { fileURLToPath } from "url";
+import fs from "fs";
 import { storage } from "./storage";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Use __dirname directly since we're using Node.js environment
+const __dirname = path.resolve();
 
 // Load environment variables from .env file
 config();
@@ -92,6 +92,20 @@ async function initializeDefaultUser() {
     } else {
       // Serve static files in production
       serveStatic(app);
+      
+      // Log environment and process info
+      console.log('NODE_ENV:', process.env.NODE_ENV);
+      console.log('VERCEL_ENV:', process.env.VERCEL_ENV);
+      console.log('Current directory:', process.cwd());
+      console.log('Files in current directory:', fs.readdirSync(process.cwd()));
+      
+      if (fs.existsSync(path.join(process.cwd(), 'dist'))) {
+        console.log('Files in dist directory:', fs.readdirSync(path.join(process.cwd(), 'dist')));
+      }
+      
+      if (fs.existsSync(path.join(process.cwd(), 'dist', 'public'))) {
+        console.log('Files in dist/public directory:', fs.readdirSync(path.join(process.cwd(), 'dist', 'public')));
+      }
     }
 
     // Start the server
