@@ -34,11 +34,13 @@ app.use(cors({
     'http://localhost:5174', 
     'http://localhost:5175',
     'https://careerpathfinder.io',
-    'https://www.careerpathfinder.io'
+    'https://www.careerpathfinder.io',
+    'https://api.careerpathfinder.io'  // Add the API subdomain
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Access-Control-Allow-Origin']
 }));
 
 // Parse JSON bodies
@@ -72,6 +74,21 @@ async function initializeDefaultUser() {
     // Add health check endpoint
     app.get('/api/health', (req, res) => {
       res.status(200).json({ status: 'healthy' });
+    });
+
+    // Add CORS test endpoint
+    app.get('/api/cors-test', (req, res) => {
+      res.header('Access-Control-Allow-Origin', req.headers.origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.status(200).json({ 
+        success: true, 
+        message: 'CORS is working correctly',
+        request: {
+          origin: req.headers.origin,
+          host: req.headers.host,
+          referer: req.headers.referer
+        }
+      });
     });
 
     // Register API routes first
