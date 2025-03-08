@@ -16,9 +16,9 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:3001',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: false,
       },
     },
   },
