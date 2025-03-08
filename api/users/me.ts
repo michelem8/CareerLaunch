@@ -22,7 +22,32 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     username: "demo_user",
     currentRole: "Product Manager",
     targetRole: "Engineering Manager",
+    skills: ["JavaScript", "React", "Node.js", "Project Management", "Product Development"],
     surveyCompleted: true,
+    hasCompletedSurvey: true,
+    resumeAnalysis: {
+      skills: ["JavaScript", "React", "Node.js", "Project Management", "Product Development"],
+      experience: [
+        "Senior Product Manager at Tech Company (2018-2023)",
+        "Product Manager at Software Inc (2015-2018)"
+      ],
+      education: [
+        "MBA, Business School (2015)",
+        "BS Computer Science, University (2012)"
+      ],
+      missingSkills: [
+        "Engineering Leadership",
+        "Team Building", 
+        "Technical Architecture",
+        "Cross-functional Communication"
+      ],
+      recommendations: [
+        "Focus on team building and leadership skills",
+        "Develop deeper technical architecture knowledge",
+        "Practice making technical decisions at scale"
+      ],
+      suggestedRoles: ["Technical Product Manager", "Engineering Manager", "Development Team Lead"]
+    },
     preferences: {
       preferredIndustries: ["enterprise-software", "ai-ml"],
       learningStyles: ["practical", "self-paced"],
