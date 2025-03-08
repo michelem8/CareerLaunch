@@ -8,7 +8,20 @@ import fs from 'fs';
 const app = express();
 
 // Add basic middleware
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:5174', 
+    'http://localhost:5175',
+    'https://careerpathfinder.io',
+    'https://www.careerpathfinder.io',
+    'https://api.careerpathfinder.io'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Access-Control-Allow-Origin']
+}));
 app.use(express.json());
 
 // Simple request logging
@@ -21,6 +34,22 @@ app.use((req, res, next) => {
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Add CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).json({ 
+    success: true, 
+    message: 'CORS is working correctly',
+    request: {
+      origin: req.headers.origin,
+      host: req.headers.host,
+      referer: req.headers.referer
+    },
     timestamp: new Date().toISOString()
   });
 });

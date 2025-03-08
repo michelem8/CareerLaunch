@@ -5,10 +5,36 @@ import { QueryClient, type QueryFunction } from "@tanstack/react-query";
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 console.log('API Base URL:', API_BASE_URL);
+console.log('Environment:', import.meta.env.MODE);
+
+// Add a custom fetch function with built-in CORS support
+export const corsFixFetch = async (url: string, options: RequestInit = {}) => {
+  // Ensure we have the right headers
+  const headers = {
+    ...(options.headers || {}),
+    'Content-Type': options.method === 'GET' ? undefined : 'application/json',
+    'Accept': 'application/json',
+  };
+
+  // Try the normal fetch first
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+      mode: 'cors'
+    });
+    
+    return response;
+  } catch (error) {
+    console.error(`Fetch error for ${url}:`, error);
+    throw error;
+  }
+};
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
+    const text = await res.text().catch(() => res.statusText);
     throw new Error(`${res.status}: ${text}`);
   }
 }
@@ -18,15 +44,9 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
   console.log(`Making ${method} request to:`, fullUrl);
   
   try {
-    const response = await fetch(fullUrl, {
+    const response = await corsFixFetch(fullUrl, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
       body: body ? JSON.stringify(body) : undefined,
-      // Adding mode to help with CORS issues
-      mode: 'cors',
     });
 
     // Log response details for debugging
@@ -57,10 +77,7 @@ export const getQueryFn: <T>(options: {
     console.log("Making query to:", fullUrl);
     
     try {
-      const res = await fetch(fullUrl, {
-        credentials: "include",
-        mode: 'cors', // Adding mode to help with CORS issues
-      });
+      const res = await corsFixFetch(fullUrl);
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         return null;
@@ -74,6 +91,20 @@ export const getQueryFn: <T>(options: {
         console.error('This may be a CORS issue. Check that the server allows requests from this origin.');
         console.error('Current origin:', window.location.origin);
         console.error('Target URL:', fullUrl);
+        
+        // Try to check the CORS test endpoint to diagnose the issue
+        try {
+          const corsTestUrl = `${API_BASE_URL}/api/cors-test`;
+          console.log('Testing CORS with endpoint:', corsTestUrl);
+          const testResponse = await fetch(corsTestUrl, { 
+            mode: 'cors', 
+            credentials: 'include' 
+          });
+          const testResult = await testResponse.text();
+          console.log('CORS test result:', testResult);
+        } catch (corsTestError) {
+          console.error('CORS test failed:', corsTestError);
+        }
       }
       throw error;
     }
