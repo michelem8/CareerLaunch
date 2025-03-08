@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import { createServer } from 'http';
 import { registerRoutes } from '../server/routes';
-import { setupVite, serveStatic } from '../server/vite';
+import { serveStatic } from '../server/vite';
 import { storage } from '../server/storage';
 import cors from 'cors';
 import path from 'path';
@@ -14,7 +14,6 @@ config();
 
 // Initialize Express app
 const app = express();
-const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 // Enable CORS
 app.use(cors({
@@ -41,57 +40,50 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize default user
-async function initializeDefaultUser() {
-  try {
-    const defaultUser = await storage.createUser({
-      username: "demo_user",
-      password: "demo_password"
-    });
-    console.log("Default user initialized:", defaultUser);
-  } catch (error) {
-    console.error("Error initializing default user:", error);
-  }
-}
-
 // Add health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'healthy' });
 });
 
-// Setup server
-let serverInitialized = false;
-async function setupServer() {
-  if (serverInitialized) return;
+// Initialize server
+let isInitialized = false;
+async function initServer() {
+  if (isInitialized) return;
   
   try {
-    await initializeDefaultUser();
+    // Initialize storage and default user
+    try {
+      const defaultUser = await storage.createUser({
+        username: "demo_user",
+        password: "demo_password"
+      });
+      console.log("Default user initialized");
+    } catch (error) {
+      console.error("Error initializing default user:", error);
+    }
     
     // Register API routes
-    const httpServer = await registerRoutes(app);
+    await registerRoutes(app);
     
-    // Serve static files in production
-    serveStatic(app);
-    
-    console.log('Server setup complete');
-    serverInitialized = true;
+    isInitialized = true;
+    console.log("Server initialized successfully");
   } catch (error) {
-    console.error('Failed to setup server:', error);
+    console.error("Server initialization error:", error);
   }
 }
 
 // Vercel serverless handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Initialize server if not already done
-  if (!serverInitialized) {
-    await setupServer();
+  // Initialize server on first request
+  if (!isInitialized) {
+    console.log("Initializing server...");
+    await initServer();
   }
-
-  // Log environment for debugging
-  console.log('NODE_ENV:', process.env.NODE_ENV);
-  console.log('VERCEL_ENV:', process.env.VERCEL_ENV);
-  console.log('Request path:', req.url);
   
+  // Debug logging
+  console.log(`Handling ${req.method} request to ${req.url}`);
+  
+  // Process the request
   return new Promise<void>((resolve) => {
     app(req as any, res as any, () => {
       resolve();
