@@ -1,6 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 
 // Create a bare minimum Express app
 const app = express();
@@ -23,34 +25,50 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root endpoint
-app.get('/', (req, res) => {
+// Setup static file serving from dist/public
+const publicDir = path.join(process.cwd(), 'dist', 'public');
+if (fs.existsSync(publicDir)) {
+  console.log(`Serving static files from ${publicDir}`);
+  app.use(express.static(publicDir));
+} else {
+  console.warn(`Public directory not found at ${publicDir}`);
+}
+
+// Serve client app for all non-API routes
+app.get('*', (req, res) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+
+  // Try to serve index.html
+  const indexPath = path.join(publicDir, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    console.log(`Serving index.html from ${indexPath}`);
+    return res.sendFile(indexPath);
+  }
+  
+  // Fallback to inline HTML
+  console.log('Serving fallback HTML');
   res.status(200).send(`
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Career Launch API</title>
+        <title>Career Launch</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
           h1 { color: #0070f3; }
         </style>
       </head>
       <body>
-        <h1>Career Launch API</h1>
-        <p>The API is running. Try visiting the <a href="/api/health">/api/health</a> endpoint.</p>
+        <h1>Career Launch</h1>
+        <p>The application is loading...</p>
+        <p>If you continue to see this page, please check the deployment logs.</p>
         <p>Server timestamp: ${new Date().toISOString()}</p>
+        <p><a href="/api/health">Check API Status</a></p>
       </body>
     </html>
   `);
-});
-
-// Catch-all route
-app.get('*', (req, res) => {
-  res.status(200).json({
-    message: 'Career Launch API',
-    path: req.path,
-    timestamp: new Date().toISOString()
-  });
 });
 
 // Error handling
