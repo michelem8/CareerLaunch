@@ -1,11 +1,13 @@
 /// <reference types="vite/client" />
 import { QueryClient, type QueryFunction } from "@tanstack/react-query";
 
-// Define the API base URL
+// Define the API base URL - ensure it includes the www subdomain in production
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
+// Log for debugging
 console.log('API Base URL:', API_BASE_URL);
 console.log('Environment:', import.meta.env.MODE);
+console.log('Current origin:', typeof window !== 'undefined' ? window.location.origin : 'SSR');
 
 // MOCK DATA for fallbacks when API calls fail
 const MOCK_DATA = {
@@ -148,6 +150,9 @@ const getMockData = (path: string, body?: any): any => {
 
 // Add a custom fetch function with built-in CORS support
 export const corsFixFetch = async (url: string, options: RequestInit = {}) => {
+  // Check if URL is already absolute
+  const isAbsoluteUrl = url.startsWith('http://') || url.startsWith('https://');
+  
   // Ensure we have the right headers
   const headers = {
     ...(options.headers || {}),
@@ -155,18 +160,51 @@ export const corsFixFetch = async (url: string, options: RequestInit = {}) => {
     'Accept': 'application/json',
   };
 
-  // Try the normal fetch first
+  // Log the request for debugging
+  console.log(`Making request to: ${url}`);
+  console.log(`Using headers:`, headers);
+
   try {
+    // Directly use the configured API URL to avoid redirects
     const response = await fetch(url, {
       ...options,
       headers,
       credentials: 'include',
-      mode: 'cors'
+      mode: 'cors',
+      redirect: 'error'  // Don't follow redirects as they can cause CORS issues
     });
+    
+    // Check if the response needs handling
+    if (response.status === 0) {
+      // This is a special case that might indicate a CORS error
+      throw new Error('Zero status response, likely a CORS error');
+    }
     
     return response;
   } catch (error) {
     console.error(`Fetch error for ${url}:`, error);
+    
+    // If we detect a redirect issue, try again with redirect: follow
+    if (error.message && (
+        error.message.includes('redirect') || 
+        error.message.includes('Redirect')
+      )) {
+      console.log('Detected redirect issue, retrying with redirect: follow');
+      try {
+        const response = await fetch(url, {
+          ...options,
+          headers,
+          credentials: 'include',
+          mode: 'cors',
+          redirect: 'follow'
+        });
+        return response;
+      } catch (retryError) {
+        console.error(`Retry fetch error for ${url}:`, retryError);
+        throw retryError;
+      }
+    }
+    
     throw error;
   }
 };
@@ -179,7 +217,13 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export const apiRequest = async (method: string, path: string, body?: unknown) => {
-  const fullUrl = `${API_BASE_URL}${path}`;
+  // Always use the full API URL with the www subdomain when available
+  const fullUrl = path.startsWith('http') 
+    ? path  // If path is already a full URL, use it as is
+    : path.startsWith('/') 
+      ? `${API_BASE_URL}${path}`  // If path starts with /, append to base URL
+      : `${API_BASE_URL}/${path}`; // Otherwise, ensure / between base URL and path
+  
   console.log(`Making ${method} request to:`, fullUrl);
   
   try {
@@ -190,7 +234,6 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
 
     // Log response details for debugging
     console.log(`Response status: ${response.status}`);
-    console.log(`Response headers:`, Object.fromEntries([...response.headers]));
     
     return response;
   } catch (error) {
@@ -200,7 +243,7 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
       console.error('This may be a CORS issue. Check that the server allows requests from this origin.');
       console.error('Current origin:', window.location.origin);
-      console.error('Target URL:', `${API_BASE_URL}${path}`);
+      console.error('Target URL:', fullUrl);
       
       // Create a mock response using the fallback data
       const mockData = getMockData(path, body);
@@ -225,7 +268,13 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const url = queryKey[0] as string;
-    const fullUrl = `${API_BASE_URL}${url}`;
+    // Always use the full API URL with www subdomain when available
+    const fullUrl = url.startsWith('http')
+      ? url  // If URL is already absolute, use it as is
+      : url.startsWith('/') 
+        ? `${API_BASE_URL}${url}`  // If URL starts with /, append to base URL
+        : `${API_BASE_URL}/${url}`; // Otherwise, ensure / between base URL and path
+      
     console.log("Making query to:", fullUrl);
     
     try {

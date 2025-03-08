@@ -29,19 +29,50 @@ const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 // Enable CORS with specific configuration
 app.use(cors({
-  origin: [
-    'http://localhost:5173', 
-    'http://localhost:5174', 
-    'http://localhost:5175',
-    'https://careerpathfinder.io',
-    'https://www.careerpathfinder.io',
-    'https://api.careerpathfinder.io'  // Add the API subdomain
-  ],
+  origin: function(origin, callback) {
+    // Primary domains - list in order of priority
+    const allowedOrigins = [
+      // Production domains (non-www first for priority)
+      'https://careerpathfinder.io',  // Make this the primary domain
+      'https://www.careerpathfinder.io',
+      'https://api.careerpathfinder.io',
+      // Development domains
+      'http://localhost:5173', 
+      'http://localhost:5174', 
+      'http://localhost:5175'
+    ];
+    
+    // Allow requests with no origin (like mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin is allowed
+    if (allowedOrigins.indexOf(origin) !== -1 || 
+        origin.endsWith('careerpathfinder.io')) {
+      
+      // Set Access-Control-Allow-Origin to match the requesting origin
+      return callback(null, true);
+    }
+    
+    // Log unauthorized origin attempts in production for monitoring
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(`Blocked CORS request from unauthorized origin: ${origin}`);
+    }
+    
+    return callback(null, false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Access-Control-Allow-Origin']
+  exposedHeaders: ['Access-Control-Allow-Origin'],
+  preflightContinue: false,  // Don't pass the preflight request to the next handler
+  optionsSuccessStatus: 204  // Return 204 for OPTIONS requests
 }));
+
+// Add a special handler for preflight requests to avoid redirect issues
+app.options('*', (req, res) => {
+  // This ensures OPTIONS requests are handled correctly
+  res.status(204).end();
+});
 
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
@@ -50,6 +81,34 @@ app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 // Simple request logging
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
+  
+  // Special handling for OPTIONS/preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('Received preflight request:', {
+      origin: req.headers.origin,
+      path: req.path,
+      accessControlRequestMethod: req.headers['access-control-request-method'],
+      accessControlRequestHeaders: req.headers['access-control-request-headers']
+    });
+  }
+  
+  next();
+});
+
+// Middleware to ensure no unnecessary redirects for preflight requests
+app.use((req, res, next) => {
+  // Skip redirects for OPTIONS requests to prevent CORS preflight issues
+  if (req.method === 'OPTIONS') {
+    // Set proper CORS headers directly
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Respond immediately with 204 No Content
+    return res.status(204).end();
+  }
+  
   next();
 });
 
@@ -76,18 +135,47 @@ async function initializeDefaultUser() {
       res.status(200).json({ status: 'healthy' });
     });
 
-    // Add CORS test endpoint
+    // Enhanced CORS test endpoint with detailed diagnostics
     app.get('/api/cors-test', (req, res) => {
-      res.header('Access-Control-Allow-Origin', req.headers.origin);
+      // Ensure CORS headers are set for this response
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.header('Access-Control-Allow-Credentials', 'true');
+      
+      // Return detailed information about the request
       res.status(200).json({ 
         success: true, 
         message: 'CORS is working correctly',
         request: {
           origin: req.headers.origin,
           host: req.headers.host,
-          referer: req.headers.referer
+          referer: req.headers.referer,
+          userAgent: req.headers['user-agent']
+        },
+        server: {
+          time: new Date().toISOString(),
+          nodeEnv: process.env.NODE_ENV,
+          cors: {
+            allowedOrigins: [
+              'https://www.careerpathfinder.io',
+              'https://careerpathfinder.io',
+              'https://api.careerpathfinder.io'
+            ],
+            credentialsSupported: true
+          }
         }
+      });
+    });
+
+    // Echo request headers for debugging
+    app.get('/api/debug/headers', (req, res) => {
+      res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      
+      res.status(200).json({
+        headers: req.headers,
+        method: req.method,
+        url: req.url,
+        path: req.path
       });
     });
 
