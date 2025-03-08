@@ -1,92 +1,78 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
-import { createServer } from 'http';
-import { registerRoutes } from '../server/routes';
-import { serveStatic } from '../server/vite';
-import { storage } from '../server/storage';
 import cors from 'cors';
-import path from 'path';
-import fs from 'fs';
-import { config } from 'dotenv';
 
-// Load environment variables
-config();
-
-// Initialize Express app
+// Create a bare minimum Express app
 const app = express();
 
-// Enable CORS
-app.use(cors({
-  origin: [
-    'http://localhost:5173', 
-    'http://localhost:5174', 
-    'http://localhost:5175',
-    'https://careerpathfinder.io',
-    'https://www.careerpathfinder.io',
-    'https://career-launch.vercel.app'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// Parse JSON bodies
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+// Add basic middleware
+app.use(cors({ origin: '*' }));
+app.use(express.json());
 
 // Simple request logging
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Add health check endpoint
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Initialize server
-let isInitialized = false;
-async function initServer() {
-  if (isInitialized) return;
-  
-  try {
-    // Initialize storage and default user
-    try {
-      const defaultUser = await storage.createUser({
-        username: "demo_user",
-        password: "demo_password"
-      });
-      console.log("Default user initialized");
-    } catch (error) {
-      console.error("Error initializing default user:", error);
-    }
-    
-    // Register API routes
-    await registerRoutes(app);
-    
-    isInitialized = true;
-    console.log("Server initialized successfully");
-  } catch (error) {
-    console.error("Server initialization error:", error);
-  }
-}
+// Root endpoint
+app.get('/', (req, res) => {
+  res.status(200).send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Career Launch API</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+          h1 { color: #0070f3; }
+        </style>
+      </head>
+      <body>
+        <h1>Career Launch API</h1>
+        <p>The API is running. Try visiting the <a href="/api/health">/api/health</a> endpoint.</p>
+        <p>Server timestamp: ${new Date().toISOString()}</p>
+      </body>
+    </html>
+  `);
+});
+
+// Catch-all route
+app.get('*', (req, res) => {
+  res.status(200).json({
+    message: 'Career Launch API',
+    path: req.path,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handling
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Express error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 
 // Vercel serverless handler
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Initialize server on first request
-  if (!isInitialized) {
-    console.log("Initializing server...");
-    await initServer();
-  }
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  console.log(`Starting handler for ${req.method} ${req.url}`);
   
-  // Debug logging
-  console.log(`Handling ${req.method} request to ${req.url}`);
-  
-  // Process the request
-  return new Promise<void>((resolve) => {
-    app(req as any, res as any, () => {
-      resolve();
+  try {
+    // Forward the request to Express
+    app(req as any, res as any, (err?: any) => {
+      if (err) {
+        console.error('Express error:', err);
+        res.status(500).json({ error: 'Express error' });
+      }
     });
-  });
+  } catch (error) {
+    console.error('Handler error:', error);
+    res.status(500).json({ error: 'Handler error' });
+  }
 } 
