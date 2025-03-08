@@ -27,6 +27,21 @@
       "dest": "/api/resume/analyze.ts",
       "methods": ["POST", "OPTIONS"]
     },
+    {
+      "src": "/api/survey/complete",
+      "dest": "/api/survey/complete.ts",
+      "methods": ["POST", "OPTIONS"]
+    },
+    {
+      "src": "/api/survey",
+      "dest": "/api/survey/index.ts",
+      "methods": ["POST", "OPTIONS"]
+    },
+    {
+      "src": "/api/courses/recommended",
+      "dest": "/api/courses/recommended.ts",
+      "methods": ["GET", "OPTIONS"]
+    },
     { "src": "/api/(.*)", "dest": "/api/index.ts" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/api/index.ts" }
