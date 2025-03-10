@@ -21,36 +21,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     try {
       const { resumeText, currentRole, targetRole } = req.body;
-      console.log('Received resume text for analysis');
+      console.log('Received resume text for analysis (length):', resumeText?.length || 0);
       console.log('Current role:', currentRole);
       console.log('Target role:', targetRole);
+      console.log('OpenAI API Key available:', !!process.env.OPENAI_API_KEY);
       
-      // Use OpenAI to analyze the resume
-      const analysis = await analyzeResumeWithAI(resumeText);
-      
-      // Generate skill gap analysis using OpenAI
-      const skillGap = await generateSkillGapAnalysis(
-        analysis.skills || [], 
-        targetRole || "", 
-        { currentRole: currentRole || "" }
-      );
-      
-      // Merge the data
-      const mockAnalysis = {
-        user: {
-          id: 1,
-          username: "demo_user",
-          resumeAnalysis: {
-            ...analysis,
-            missingSkills: skillGap.missingSkills,
-            recommendations: skillGap.recommendations,
-            suggestedRoles: analysis.suggestedRoles || []
-          }
-        },
-        skillGap
-      };
-      
-      res.status(200).json(mockAnalysis);
+      try {
+        // Use OpenAI to analyze the resume
+        const analysis = await analyzeResumeWithAI(resumeText);
+        console.log('Resume analysis successful:', analysis);
+        
+        // Generate skill gap analysis using OpenAI
+        const skillGap = await generateSkillGapAnalysis(
+          analysis.skills || [], 
+          targetRole || "", 
+          { currentRole: currentRole || "" }
+        );
+        console.log('Skill gap analysis successful:', skillGap);
+        
+        // Merge the data
+        const mockAnalysis = {
+          user: {
+            id: 1,
+            username: "demo_user",
+            resumeAnalysis: {
+              ...analysis,
+              missingSkills: skillGap.missingSkills,
+              recommendations: skillGap.recommendations,
+              suggestedRoles: analysis.suggestedRoles || []
+            }
+          },
+          skillGap
+        };
+        
+        res.status(200).json(mockAnalysis);
+      } catch (openaiError) {
+        console.error('OpenAI API error:', openaiError);
+        
+        // Fall back to static analysis if OpenAI fails
+        const staticAnalysis = generateStaticAnalysis(resumeText, currentRole, targetRole);
+        console.log('Using static fallback analysis:', staticAnalysis);
+        
+        res.status(200).json(staticAnalysis);
+      }
     } catch (error) {
       console.error('Error analyzing resume:', error);
       res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to analyze resume' });
@@ -146,6 +159,240 @@ Guidelines:
     console.error("Error in skill gap analysis:", error);
     throw error;
   }
+}
+
+// Static fallback function for when OpenAI is not available
+function generateStaticAnalysis(resumeText: string, currentRole?: string, targetRole?: string) {
+  console.log('Using static analysis with roles:', { currentRole, targetRole });
+  
+  // Extract simple skills from text
+  const skills = extractBasicSkills(resumeText);
+  
+  // Determine career path based on roles or extracted skills
+  const careerPath = determineCareerPath(currentRole, targetRole, skills);
+  
+  // Generate recommendations based on career path
+  const recommendations = getRecommendationsForPath(careerPath);
+  const missingSkills = getMissingSkillsForPath(careerPath);
+  const suggestedRoles = getSuggestedRolesForPath(careerPath);
+  
+  return {
+    user: {
+      id: 1,
+      username: "demo_user",
+      resumeAnalysis: {
+        skills,
+        experience: extractBasicExperience(resumeText),
+        education: extractBasicEducation(resumeText),
+        missingSkills,
+        recommendations,
+        suggestedRoles
+      }
+    },
+    skillGap: {
+      missingSkills,
+      recommendations
+    }
+  };
+}
+
+function extractBasicSkills(text: string): string[] {
+  const commonSkills = [
+    "JavaScript", "React", "Node.js", "Python", "Java", "HTML", "CSS", 
+    "SQL", "MongoDB", "AWS", "Docker", "Kubernetes", "Git",
+    "Project Management", "Agile", "Scrum", "Leadership", "Communication",
+    "Product Development", "UI/UX", "Data Analysis", "Machine Learning"
+  ];
+  
+  return commonSkills.filter(skill => 
+    text.toLowerCase().includes(skill.toLowerCase())
+  ).slice(0, 10);
+}
+
+function extractBasicExperience(text: string): string[] {
+  const years = Array.from({ length: 30 }, (_, i) => (new Date().getFullYear() - i).toString());
+  const experienceItems = [];
+  
+  for (const year of years) {
+    if (text.includes(year)) {
+      experienceItems.push(`Experience from ${year}`);
+      if (experienceItems.length >= 3) break;
+    }
+  }
+  
+  return experienceItems;
+}
+
+function extractBasicEducation(text: string): string[] {
+  const degrees = ["Bachelor", "Master", "MBA", "PhD", "Degree", "BS", "MS", "BA", "Certificate"];
+  const educationItems = [];
+  
+  for (const degree of degrees) {
+    if (text.toLowerCase().includes(degree.toLowerCase())) {
+      educationItems.push(`${degree} degree`);
+      if (educationItems.length >= 2) break;
+    }
+  }
+  
+  return educationItems;
+}
+
+function determineCareerPath(currentRole?: string, targetRole?: string, skills: string[] = []): string {
+  const lowerCurrentRole = currentRole?.toLowerCase() || '';
+  const lowerTargetRole = targetRole?.toLowerCase() || '';
+  const lowerSkills = skills.map(s => s.toLowerCase());
+  
+  if (lowerTargetRole.includes('manager') || lowerTargetRole.includes('lead') || lowerTargetRole.includes('director')) {
+    return "management";
+  }
+  
+  if (lowerTargetRole.includes('front') || lowerTargetRole.includes('ui') || lowerTargetRole.includes('ux')) {
+    return "frontend";
+  }
+  
+  if (lowerTargetRole.includes('back') || lowerTargetRole.includes('api') || lowerTargetRole.includes('server')) {
+    return "backend";
+  }
+  
+  if (lowerTargetRole.includes('data') || lowerTargetRole.includes('ml') || lowerTargetRole.includes('ai')) {
+    return "data";
+  }
+  
+  // Fall back to skills-based determination
+  if (lowerSkills.some(s => s.includes("react") || s.includes("angular") || s.includes("frontend") || s.includes("ui") || s.includes("css"))) {
+    return "frontend";
+  }
+  
+  if (lowerSkills.some(s => s.includes("node") || s.includes("api") || s.includes("backend") || s.includes("database"))) {
+    return "backend";
+  }
+  
+  if (lowerSkills.some(s => s.includes("manage") || s.includes("lead") || s.includes("direct"))) {
+    return "management";
+  }
+  
+  return "technical"; // Default
+}
+
+function getRecommendationsForPath(careerPath: string): string[] {
+  const recommendations: Record<string, string[]> = {
+    technical: [
+      "Develop a deeper understanding of system design principles",
+      "Build projects that demonstrate scalability concepts",
+      "Learn cloud architecture and deployment strategies",
+      "Practice solving complex technical problems",
+      "Contribute to open-source projects"
+    ],
+    frontend: [
+      "Build a portfolio of responsive web applications",
+      "Study advanced UI/UX principles",
+      "Learn modern frontend frameworks in depth",
+      "Practice implementing accessible designs",
+      "Develop component libraries and design systems"
+    ],
+    backend: [
+      "Design and implement RESTful and GraphQL APIs",
+      "Learn database optimization techniques",
+      "Study server scaling and deployment strategies",
+      "Develop microservice architectures",
+      "Practice implementing authentication and security"
+    ],
+    management: [
+      "Focus on team building and leadership skills",
+      "Develop deeper technical architecture knowledge",
+      "Practice making technical decisions at scale",
+      "Learn about team dynamics and management",
+      "Build cross-functional communication skills"
+    ],
+    data: [
+      "Build data analysis and visualization projects",
+      "Develop machine learning models",
+      "Study big data processing frameworks",
+      "Learn statistical analysis techniques",
+      "Practice communicating insights from data"
+    ]
+  };
+  
+  return recommendations[careerPath] || recommendations.technical;
+}
+
+function getMissingSkillsForPath(careerPath: string): string[] {
+  const missingSkills: Record<string, string[]> = {
+    technical: [
+      "System Design",
+      "Scalability Patterns",
+      "Cloud Architecture",
+      "Distributed Systems",
+      "Performance Optimization"
+    ],
+    frontend: [
+      "Advanced React Patterns",
+      "UI/UX Design Principles", 
+      "Responsive Web Design",
+      "State Management",
+      "Accessibility Standards"
+    ],
+    backend: [
+      "API Design",
+      "Database Optimization",
+      "Server Scaling",
+      "Microservices",
+      "Security Practices"
+    ],
+    management: [
+      "Engineering Leadership",
+      "Team Building",
+      "Technical Architecture",
+      "Cross-functional Communication",
+      "Project Management"
+    ],
+    data: [
+      "Data Analysis",
+      "Machine Learning",
+      "Statistical Methods",
+      "Big Data Processing",
+      "Data Visualization"
+    ]
+  };
+  
+  return missingSkills[careerPath] || missingSkills.technical;
+}
+
+function getSuggestedRolesForPath(careerPath: string): string[] {
+  const suggestedRoles: Record<string, string[]> = {
+    technical: [
+      "Software Engineer",
+      "System Architect",
+      "DevOps Engineer",
+      "Full Stack Developer"
+    ],
+    frontend: [
+      "Frontend Developer",
+      "UI Engineer",
+      "React Developer",
+      "UX Engineer"
+    ],
+    backend: [
+      "Backend Developer",
+      "API Engineer",
+      "System Developer",
+      "Database Engineer"
+    ],
+    management: [
+      "Engineering Manager",
+      "Technical Team Lead",
+      "Product Manager",
+      "CTO"
+    ],
+    data: [
+      "Data Scientist",
+      "Data Engineer",
+      "Machine Learning Engineer",
+      "Data Analyst"
+    ]
+  };
+  
+  return suggestedRoles[careerPath] || suggestedRoles.technical;
 }
 
 // Helper function to extract skills from resume text
