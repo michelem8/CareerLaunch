@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# First build the client
-cd client
-npm run build
-cd ..
+# Deploy to Vercel
+echo "Deploying to Vercel..."
+vercel --prod -y
 
-# Deploy the entire application
-vercel --prod -y 
+echo "Deployment completed!" 
