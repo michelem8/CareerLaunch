@@ -4,7 +4,7 @@ import { openai } from '../../server/openai-client';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Always set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -20,15 +20,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle the POST request for analyzing resume
   if (req.method === 'POST') {
     try {
-      const { resumeText } = req.body;
+      const { resumeText, currentRole, targetRole } = req.body;
       console.log('Received resume text for analysis');
+      console.log('Current role:', currentRole);
+      console.log('Target role:', targetRole);
       
       // Use OpenAI to analyze the resume
       const analysis = await analyzeResumeWithAI(resumeText);
       
       // Generate skill gap analysis using OpenAI
-      const skillGap = await generateSkillGapAnalysis(analysis.skills, analysis.experience);
+      const skillGap = await generateSkillGapAnalysis(
+        analysis.skills || [], 
+        targetRole || "", 
+        { currentRole: currentRole || "" }
+      );
       
+      // Merge the data
       const mockAnalysis = {
         user: {
           id: 1,
@@ -36,7 +43,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           resumeAnalysis: {
             ...analysis,
             missingSkills: skillGap.missingSkills,
-            recommendations: skillGap.recommendations
+            recommendations: skillGap.recommendations,
+            suggestedRoles: analysis.suggestedRoles || []
           }
         },
         skillGap
@@ -60,19 +68,21 @@ async function analyzeResumeWithAI(resumeText: string) {
       messages: [
         {
           role: "system",
-          content: `You are a career advisor specializing in analyzing resumes. Extract key information and return it in JSON format with the following structure:
+          content: `You are a career advisor specializing in analyzing resumes and suggesting career paths. Extract key information from the resume and return it in JSON format with the following structure:
 {
   "skills": string[],
   "experience": string[],
-  "education": string[]
+  "education": string[],
+  "suggestedRoles": string[]
 }
 
 Guidelines:
 1. Extract technical and soft skills mentioned in the resume
 2. Format experience entries as "Job Title at Company (YYYY-YYYY)"
 3. Format education entries as "Degree, Institution (YYYY)"
-4. Be comprehensive but concise
-5. Ensure all dates and titles are accurate`
+4. Suggest 3-5 realistic roles based on their experience and skills
+5. Be comprehensive but concise
+6. Ensure all dates and titles are accurate`
         },
         {
           role: "user",
@@ -94,31 +104,32 @@ Guidelines:
   }
 }
 
-async function generateSkillGapAnalysis(skills: string[], experience: string[]) {
+async function generateSkillGapAnalysis(skills: string[], targetRole: string, user: { currentRole: string }) {
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: `You are a career development expert. Analyze the provided skills and experience to identify skill gaps and provide recommendations. Return a JSON object with:
+          content: `You are a career development expert. Analyze the provided skills and target role to identify skill gaps and provide recommendations. Return a JSON object with:
 {
-  "missingSkills": string[], // 5-7 critical skills they should develop
-  "recommendations": string[] // 3-5 specific, actionable recommendations
+  "missingSkills": string[], // 5-7 critical skills they should develop for the target role
+  "recommendations": string[] // 3-5 specific, actionable recommendations for career progression
 }
 
 Guidelines:
-1. Focus on both technical and soft skills
+1. Focus on both technical and soft skills needed for the target role
 2. Consider industry trends and job market demands
 3. Provide specific, actionable recommendations
 4. Prioritize skills that would have the most impact
-5. Consider the candidate's experience level`
+5. Consider the candidate's current skills and role when making recommendations`
         },
         {
           role: "user",
           content: JSON.stringify({
-            currentSkills: skills,
-            experience: experience
+            currentRole: user.currentRole,
+            targetRole: targetRole,
+            currentSkills: skills
           })
         }
       ],

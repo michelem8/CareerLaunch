@@ -133,22 +133,29 @@ export async function registerRoutes(app: Express) {
   app.post("/api/resume/analyze", async (req, res) => {
     try {
       console.log("Received resume data:", req.body);
-      const { resumeText } = z.object({ resumeText: z.string() }).parse(req.body);
+      const { resumeText, currentRole, targetRole } = z.object({ 
+        resumeText: z.string(),
+        currentRole: z.string().optional(),
+        targetRole: z.string().optional()
+      }).parse(req.body);
+      
       const userId = 1; // In a real app, get from session
       const user = await storage.getUser(userId);
       if (!user) throw new Error("User not found");
 
       const analysis = await analyzeResume(resumeText);
       
-      // Get skill gap analysis based on current role and target role
+      // Get skill gap analysis based on current role and target role (from the request if provided)
       const skillGap = await getSkillGapAnalysis(
         analysis.skills || [], 
-        user.targetRole || "",
-        { currentRole: user.currentRole || undefined }
+        targetRole || user.targetRole || "",
+        { currentRole: currentRole || user.currentRole || undefined }
       );
 
-      console.log("User current role:", user.currentRole);
-      console.log("User target role:", user.targetRole);
+      console.log("Using roles for analysis:", { 
+        currentRole: currentRole || user.currentRole, 
+        targetRole: targetRole || user.targetRole 
+      });
       console.log("Skill gap analysis:", skillGap);
 
       // Merge the skill gap analysis with the resume analysis
