@@ -2,19 +2,12 @@
 
 # Build the client locally
 echo "Building client..."
+cd client
 npm run build
 
-# Create a minimal vercel.json for static deployment
-echo "Creating minimal Vercel configuration..."
-cat > dist/vercel.json << EOL
-{
-  "version": 2,
-  "cleanUrls": true
-}
-EOL
-
-# Deploy directly from the dist directory
+# Navigate to the dist directory and deploy
 echo "Deploying to Vercel..."
-vercel --prod -y dist --static
+cd dist
+vercel --prod --yes
 
 echo "Deployment completed!" 
