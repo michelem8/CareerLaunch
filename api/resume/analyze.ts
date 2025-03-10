@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { openai } from '../../server/openai-client';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Always set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
@@ -22,44 +23,117 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       const { resumeText } = req.body;
       console.log('Received resume text for analysis');
       
-      // Extract skills from resume text
-      const extractedSkills = extractSkillsFromResume(resumeText);
-      const experience = extractExperienceFromResume(resumeText);
-      const education = extractEducationFromResume(resumeText);
+      // Use OpenAI to analyze the resume
+      const analysis = await analyzeResumeWithAI(resumeText);
       
-      // Generate appropriate recommendations based on extracted skills
-      const missingSkills = generateMissingSkills(extractedSkills);
-      const recommendations = generateRecommendations(extractedSkills);
-      const suggestedRoles = generateSuggestedRoles(extractedSkills);
+      // Generate skill gap analysis using OpenAI
+      const skillGap = await generateSkillGapAnalysis(analysis.skills, analysis.experience);
       
-      // Mock response with sample analysis - but using dynamically generated data
       const mockAnalysis = {
         user: {
           id: 1,
           username: "demo_user",
           resumeAnalysis: {
-            skills: extractedSkills,
-            experience: experience,
-            education: education,
-            missingSkills: missingSkills,
-            recommendations: recommendations,
-            suggestedRoles: suggestedRoles
+            ...analysis,
+            missingSkills: skillGap.missingSkills,
+            recommendations: skillGap.recommendations
           }
         },
-        skillGap: {
-          missingSkills: missingSkills,
-          recommendations: recommendations
-        }
+        skillGap
       };
       
       res.status(200).json(mockAnalysis);
     } catch (error) {
       console.error('Error analyzing resume:', error);
-      res.status(500).json({ error: 'Failed to analyze resume' });
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to analyze resume' });
     }
   } else {
     // Method not allowed
     res.status(405).json({ error: 'Method not allowed' });
+  }
+}
+
+async function analyzeResumeWithAI(resumeText: string) {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: `You are a career advisor specializing in analyzing resumes. Extract key information and return it in JSON format with the following structure:
+{
+  "skills": string[],
+  "experience": string[],
+  "education": string[]
+}
+
+Guidelines:
+1. Extract technical and soft skills mentioned in the resume
+2. Format experience entries as "Job Title at Company (YYYY-YYYY)"
+3. Format education entries as "Degree, Institution (YYYY)"
+4. Be comprehensive but concise
+5. Ensure all dates and titles are accurate`
+        },
+        {
+          role: "user",
+          content: resumeText
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No response received from OpenAI");
+    }
+
+    return JSON.parse(content);
+  } catch (error) {
+    console.error("Error in AI resume analysis:", error);
+    throw error;
+  }
+}
+
+async function generateSkillGapAnalysis(skills: string[], experience: string[]) {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: `You are a career development expert. Analyze the provided skills and experience to identify skill gaps and provide recommendations. Return a JSON object with:
+{
+  "missingSkills": string[], // 5-7 critical skills they should develop
+  "recommendations": string[] // 3-5 specific, actionable recommendations
+}
+
+Guidelines:
+1. Focus on both technical and soft skills
+2. Consider industry trends and job market demands
+3. Provide specific, actionable recommendations
+4. Prioritize skills that would have the most impact
+5. Consider the candidate's experience level`
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            currentSkills: skills,
+            experience: experience
+          })
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No response received from OpenAI");
+    }
+
+    return JSON.parse(content);
+  } catch (error) {
+    console.error("Error in skill gap analysis:", error);
+    throw error;
   }
 }
 
