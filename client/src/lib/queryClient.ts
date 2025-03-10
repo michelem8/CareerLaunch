@@ -9,8 +9,8 @@ console.log('API Base URL:', API_BASE_URL);
 console.log('Environment:', import.meta.env.MODE);
 console.log('Current origin:', typeof window !== 'undefined' ? window.location.origin : 'SSR');
 
-// MOCK DATA for fallbacks when API calls fail
-const MOCK_DATA = {
+// MOCK DATA for development mode only
+const MOCK_DATA = import.meta.env.MODE === 'development' ? {
   "/api/users/me": {
     id: 1,
     username: "demo_user",
@@ -158,11 +158,16 @@ const MOCK_DATA = {
       level: "intermediate"
     }
   ]
-};
+} : {};
 
 // Function to get mock data for a path
 const getMockData = (path: string, body?: any): any => {
-  console.log(`Using mock data for ${path}`);
+  // Only use mock data in development mode
+  if (import.meta.env.MODE !== 'development') {
+    return null;
+  }
+  
+  console.log(`Using mock data for ${path} in development mode`);
   const mockData = MOCK_DATA[path as keyof typeof MOCK_DATA];
   
   // If the mock data is a function, call it with the body
@@ -270,15 +275,17 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
       console.error('Current origin:', window.location.origin);
       console.error('Target URL:', fullUrl);
       
-      // Create a mock response using the fallback data
-      const mockData = getMockData(path, body);
-      if (mockData) {
-        console.log('Using mock data fallback');
-        const mockResponse = new Response(JSON.stringify(mockData), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
-        return mockResponse;
+      // Only use mock data in development mode
+      if (import.meta.env.MODE === 'development') {
+        const mockData = getMockData(path, body);
+        if (mockData) {
+          console.log('Using mock data fallback in development mode');
+          const mockResponse = new Response(JSON.stringify(mockData), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+          return mockResponse;
+        }
       }
     }
     

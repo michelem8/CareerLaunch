@@ -27,52 +27,15 @@ if (!process.env.RAPID_API_KEY) {
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
-// Enable CORS with specific configuration
+// Configure CORS
 app.use(cors({
-  origin: function(origin, callback) {
-    // Primary domains - list in order of priority
-    const allowedOrigins = [
-      // Production domains (non-www first for priority)
-      'https://careerpathfinder.io',  // Make this the primary domain
-      'https://www.careerpathfinder.io',
-      'https://api.careerpathfinder.io',
-      // Development domains
-      'http://localhost:5173', 
-      'http://localhost:5174', 
-      'http://localhost:5175'
-    ];
-    
-    // Allow requests with no origin (like mobile apps, curl, etc)
-    if (!origin) return callback(null, true);
-    
-    // Check if the origin is allowed
-    if (allowedOrigins.indexOf(origin) !== -1 || 
-        origin.endsWith('careerpathfinder.io')) {
-      
-      // Set Access-Control-Allow-Origin to match the requesting origin
-      return callback(null, true);
-    }
-    
-    // Log unauthorized origin attempts in production for monitoring
-    if (process.env.NODE_ENV === 'production') {
-      console.warn(`Blocked CORS request from unauthorized origin: ${origin}`);
-    }
-    
-    return callback(null, false);
-  },
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://careerpathfinder.io', 'https://www.careerpathfinder.io'] 
+    : 'http://localhost:5173', // Vite's default development port
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Access-Control-Allow-Origin'],
-  preflightContinue: false,  // Don't pass the preflight request to the next handler
-  optionsSuccessStatus: 204  // Return 204 for OPTIONS requests
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-// Add a special handler for preflight requests to avoid redirect issues
-app.options('*', (req, res) => {
-  // This ensures OPTIONS requests are handled correctly
-  res.status(204).end();
-});
 
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
@@ -217,6 +180,10 @@ async function initializeDefaultUser() {
     httpServer.listen(port, '0.0.0.0', () => {
       console.log(`Server running at http://localhost:${port}`);
       console.log('Environment:', process.env.NODE_ENV);
+      console.log('CORS origin:', process.env.NODE_ENV === 'production' 
+        ? ['https://careerpathfinder.io', 'https://www.careerpathfinder.io']
+        : 'http://localhost:5173'
+      );
     });
   } catch (error) {
     console.error('Failed to start server:', error);
