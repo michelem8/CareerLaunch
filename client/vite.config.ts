@@ -33,5 +33,7 @@ export default defineConfig({
         },
       },
     },
+    assetsDir: 'assets',
+    manifest: true
   },
 }); 
