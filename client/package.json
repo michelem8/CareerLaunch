@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "vercel-build": "vite build",
+    "vercel-build": "npm install --include=dev && vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
@@ -77,6 +77,6 @@
     "vite": "^5.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   }
 }

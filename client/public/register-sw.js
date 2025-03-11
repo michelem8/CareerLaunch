@@ -1,5 +1,5 @@
 // Register the service worker
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && import.meta.env.MODE === 'development') {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/sw.js')
       .then(function(registration) {
@@ -9,10 +9,26 @@ if ('serviceWorker' in navigator) {
         console.error('Service Worker registration failed:', error);
       });
   });
+} else if ('serviceWorker' in navigator) {
+  // Unregister any existing service worker in production
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      for (let registration of registrations) {
+        registration.unregister();
+        console.log('Service Worker unregistered for production');
+      }
+    });
+  });
 }
 
 // Check if the API is accessible or if we need to use fallbacks
 async function checkApiStatus() {
+  // Only check in development mode
+  if (import.meta.env.MODE !== 'development') {
+    window.API_ACCESSIBLE = true;
+    return;
+  }
+  
   try {
     const response = await fetch('/api/cors-test', {
       method: 'GET',
