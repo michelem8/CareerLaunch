@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,9 +8,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type ResumeUploadProps = {
+interface ResumeUploadProps {
   onComplete: () => void;
-};
+  currentRole?: string | null;
+  targetRole?: string | null;
+}
 
 interface SkillGapAnalysis {
   missingSkills: string[];
@@ -22,7 +24,7 @@ interface ResumeAnalysisResponse {
   skillGap: SkillGapAnalysis;
 }
 
-export function ResumeUpload({ onComplete }: ResumeUploadProps) {
+export function ResumeUpload({ onComplete, currentRole, targetRole }: ResumeUploadProps) {
   const [resumeText, setResumeText] = useState("");
   const [analysisResult, setAnalysisResult] = useState<SkillGapAnalysis | null>(null);
   const queryClient = useQueryClient();
@@ -33,7 +35,14 @@ export function ResumeUpload({ onComplete }: ResumeUploadProps) {
         throw new Error("Please enter your resume content before analyzing");
       }
 
-      const response = await apiRequest("POST", "/api/resume/analyze", { resumeText: text });
+      console.log("Sending resume with roles:", { currentRole, targetRole });
+      
+      const response = await apiRequest("POST", "/api/resume/analyze", { 
+        resumeText: text,
+        currentRole,
+        targetRole
+      });
+      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to analyze resume");

@@ -82,6 +82,9 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   console.log('CareerDashboard - recommendations:', recommendations);
   console.log('CareerDashboard - missingSkills:', missingSkills);
   console.log('CareerDashboard - resumeAnalysis exists:', !!user.resumeAnalysis);
+  console.log('CareerDashboard - Environment:', import.meta.env.MODE);
+  console.log('CareerDashboard - API URL:', import.meta.env.VITE_API_URL);
+  console.log('CareerDashboard - Suggested Roles:', suggestedRoles);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">

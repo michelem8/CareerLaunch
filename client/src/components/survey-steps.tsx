@@ -14,7 +14,7 @@ import { z } from "zod";
 
 type SurveyStepsProps = {
   onComplete: () => void;
-  onStepChange: (step: number) => void;
+  onStepChange: (step: number, data?: any) => void;
 };
 
 type Step = 1 | 2 | 3;
@@ -65,7 +65,17 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
 
   const updateStep = (step: Step) => {
     setCurrentStep(step);
-    onStepChange(step);
+    // Pass the current form data when updating steps
+    if (step === 2) {
+      // Pass role data when moving to step 2
+      const roleData = {
+        currentRole: form.getValues('currentRole'),
+        targetRole: form.getValues('targetRole')
+      };
+      onStepChange(step, roleData);
+    } else {
+      onStepChange(step);
+    }
   };
 
   const form = useForm<FormData>({

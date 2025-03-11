@@ -176,6 +176,10 @@ export default function Survey() {
   const totalSteps = 3;
   const [currentStep, setCurrentStep] = useState(1);
   const [corsStatus, setCorsStatus] = useState<any>(null);
+  const [roleData, setRoleData] = useState({
+    currentRole: "",
+    targetRole: ""
+  });
 
   // Run CORS test on component mount
   useEffect(() => {
@@ -242,9 +246,18 @@ export default function Survey() {
   };
 
   // Handle step changes from the SurveySteps component
-  const handleStepChange = (newStep: number) => {
-    console.log('Step changed to:', newStep); // Debug log
+  const handleStepChange = (newStep: number, data?: any) => {
+    console.log('Step changed to:', newStep, 'Data:', data); // Debug log
     setCurrentStep(newStep);
+    
+    // Save role data if provided
+    if (data && data.currentRole && data.targetRole) {
+      setRoleData({
+        currentRole: data.currentRole,
+        targetRole: data.targetRole
+      });
+      console.log('Updated role data:', data);
+    }
   };
 
   if (isLoadingUser) {
@@ -301,7 +314,11 @@ export default function Survey() {
           )}
 
           {currentStep === 2 && (
-            <ResumeUpload onComplete={handleStepComplete} />
+            <ResumeUpload 
+              onComplete={handleStepComplete} 
+              currentRole={roleData.currentRole}
+              targetRole={roleData.targetRole}
+            />
           )}
 
           {currentStep === 3 && (
