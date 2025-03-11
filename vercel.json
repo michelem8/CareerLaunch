@@ -6,5 +6,8 @@
   "framework": "vite",
   "buildCommand": "cd client && npm install --include=dev && npm run build",
   "installCommand": "cd client && npm install --include=dev",
-  "outputDirectory": "client/dist"
+  "outputDirectory": "client/dist",
+  "env": {
+    "NODE_VERSION": "18.x"
+  }
 } 
