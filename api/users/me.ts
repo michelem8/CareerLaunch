@@ -1,9 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { storage } from '../../server/storage';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Always set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -16,45 +17,33 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Mock user data for test
-  const mockUser = {
-    id: 1,
-    username: "demo_user",
-    currentRole: "Product Manager",
-    targetRole: "Engineering Manager",
-    skills: ["JavaScript", "React", "Node.js", "Project Management", "Product Development"],
-    surveyCompleted: true,
-    hasCompletedSurvey: true,
-    resumeAnalysis: {
-      skills: ["JavaScript", "React", "Node.js", "Project Management", "Product Development"],
-      experience: [
-        "Senior Product Manager at Tech Company (2018-2023)",
-        "Product Manager at Software Inc (2015-2018)"
-      ],
-      education: [
-        "MBA, Business School (2015)",
-        "BS Computer Science, University (2012)"
-      ],
-      missingSkills: [
-        "Engineering Leadership",
-        "Team Building", 
-        "Technical Architecture",
-        "Cross-functional Communication"
-      ],
-      recommendations: [
-        "Focus on team building and leadership skills",
-        "Develop deeper technical architecture knowledge",
-        "Practice making technical decisions at scale"
-      ],
-      suggestedRoles: ["Technical Product Manager", "Engineering Manager", "Development Team Lead"]
-    },
-    preferences: {
-      preferredIndustries: ["enterprise-software", "ai-ml"],
-      learningStyles: ["practical", "self-paced"],
-      timeCommitment: "4-8"
+  if (req.method === 'GET') {
+    try {
+      // In a real app, get the user ID from the session
+      const userId = 1;
+      
+      // Get the actual user data from storage
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        // Create a new user if none exists
+        const newUser = await storage.createUser({
+          username: "demo_user",
+          password: "demo_password"
+        });
+        res.json(newUser);
+        return;
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to fetch user data',
+        details: error instanceof Error ? error.stack : undefined
+      });
     }
-  };
-
-  // Return mock user data
-  res.status(200).json(mockUser);
+  } else {
+    res.status(405).json({ error: 'Method not allowed' });
+  }
 } 

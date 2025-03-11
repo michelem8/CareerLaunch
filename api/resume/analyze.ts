@@ -1,9 +1,11 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { analyzeResume, getSkillGapAnalysis } from '../../server/openai';
+import { storage } from '../../server/storage';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Always set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -21,57 +23,47 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // Get the resume text from the request body
       const { resumeText } = req.body;
+      if (!resumeText) {
+        throw new Error('Resume text is required');
+      }
+
+      // Get the current user
+      const userId = 1; // In a real app, get from session
+      const user = await storage.getUser(userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Analyze the resume using OpenAI
+      const analysis = await analyzeResume(resumeText);
       
-      // In a real app, you would send this to OpenAI for analysis
-      console.log('Resume text length:', resumeText?.length || 0);
-      
-      // Mock response with sample analysis
-      const mockAnalysis = {
-        user: {
-          id: 1,
-          username: "demo_user",
-          resumeAnalysis: {
-            skills: ["JavaScript", "React", "Node.js", "Project Management", "Product Development"],
-            experience: [
-              "Senior Product Manager at Tech Company (2018-2023)",
-              "Product Manager at Software Inc (2015-2018)"
-            ],
-            education: [
-              "MBA, Business School (2015)",
-              "BS Computer Science, University (2012)"
-            ],
-            missingSkills: [
-              "Engineering Leadership",
-              "Team Building", 
-              "Technical Architecture",
-              "Cross-functional Communication"
-            ],
-            recommendations: [
-              "Focus on team building and leadership skills",
-              "Develop deeper technical architecture knowledge",
-              "Practice making technical decisions at scale"
-            ]
-          }
-        },
-        skillGap: {
-          missingSkills: [
-            "Engineering Leadership",
-            "Team Building", 
-            "Technical Architecture",
-            "Cross-functional Communication"
-          ],
-          recommendations: [
-            "Focus on team building and leadership skills",
-            "Develop deeper technical architecture knowledge",
-            "Practice making technical decisions at scale"
-          ]
-        }
+      // Get skill gap analysis based on current role and target role
+      const skillGap = await getSkillGapAnalysis(
+        analysis.skills || [],
+        user.targetRole || '',
+        { currentRole: user.currentRole || undefined }
+      );
+
+      // Merge the analyses
+      const mergedAnalysis = {
+        ...analysis,
+        missingSkills: skillGap.missingSkills,
+        recommendations: skillGap.recommendations
       };
+
+      // Update user with the analysis results
+      const updatedUser = await storage.updateUserResumeAnalysis(userId, mergedAnalysis);
       
-      res.status(200).json(mockAnalysis);
+      res.status(200).json({
+        user: updatedUser,
+        skillGap
+      });
     } catch (error) {
       console.error('Error analyzing resume:', error);
-      res.status(500).json({ error: 'Failed to analyze resume' });
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to analyze resume',
+        details: error instanceof Error ? error.stack : undefined
+      });
     }
   } else {
     // Method not allowed
