@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "buildCommand": "cd client && npm install && npm run build",
   "outputDirectory": "client/dist",
@@ -6,6 +7,12 @@
   "installCommand": "cd client && npm install",
   "regions": ["iad1"],
   "env": {
-    "NODE_VERSION": "18.x"
-  }
+    "NODE_VERSION": "20.x"
+  },
+  "builds": [
+    {
+      "src": "client/package.json",
+      "use": "@vercel/node"
+    }
+  ]
 } 
