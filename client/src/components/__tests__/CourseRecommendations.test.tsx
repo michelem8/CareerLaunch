@@ -1,43 +1,43 @@
+/// <reference types="vitest" />
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import CourseRecommendations from '../CourseRecommendations';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
+import { renderWithClient } from '../../test/utils';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { apiRequest } from '../../../src/lib/queryClient';
 
-// Mock fetch globally
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+// Mock apiRequest
+vi.mock('../../../src/lib/queryClient', () => ({
+  apiRequest: vi.fn(),
+}));
 
 describe('CourseRecommendations', () => {
   beforeEach(() => {
-    mockFetch.mockReset();
+    vi.clearAllMocks();
   });
 
-  test('loads and displays courses from API', async () => {
+  it('loads and displays courses from API', async () => {
     const mockApiCourses = [
       {
-        id: 1,
+        id: '1',
         title: 'API Course 1',
         description: 'Test course from API',
-        imageUrl: 'https://example.com/course1.jpg',
+        platform: 'Coursera',
+        difficulty: 'Beginner',
+        duration: '4-8 weeks',
         skills: ['Programming'],
-        difficulty: 'beginner',
-        industry: 'Technology',
-        learningStyle: 'Visual',
-        timeCommitment: '4-8',
-        level: 'Beginner'
+        url: 'https://example.com/course1',
       }
     ];
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockApiCourses,
-    });
+    (apiRequest as Mock).mockResolvedValueOnce(mockApiCourses);
 
-    render(<CourseRecommendations missingSkills={['Programming']} />);
+    renderWithClient(<CourseRecommendations missingSkills={['Programming']} />);
     
     // Should show loading state initially
-    expect(screen.getByText(/Loading course recommendations.../i)).toBeInTheDocument();
+    expect(screen.getByText('Analyzing your profile and generating personalized recommendations...')).toBeInTheDocument();
     
     // Wait for API data to load
     await waitFor(() => {
@@ -45,101 +45,88 @@ describe('CourseRecommendations', () => {
     });
 
     // Verify API was called
-    expect(mockFetch).toHaveBeenCalledWith('/api/courses/recommended');
+    expect(apiRequest).toHaveBeenCalledWith('GET', '/api/courses/recommended?skills=Programming');
   });
 
-  test('handles API error gracefully', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('API Error'));
+  it('handles API error gracefully', async () => {
+    (apiRequest as Mock).mockRejectedValueOnce(new Error('Failed to fetch course recommendations'));
 
-    render(<CourseRecommendations missingSkills={['Programming']} />);
+    renderWithClient(<CourseRecommendations missingSkills={['Programming']} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to load courses/i)).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch course recommendations')).toBeInTheDocument();
     });
   });
 
-  test('displays no courses message when API returns empty array', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [],
-    });
+  it('displays no courses message when API returns empty array', async () => {
+    (apiRequest as Mock).mockResolvedValueOnce([]);
 
-    render(<CourseRecommendations missingSkills={['Programming']} />);
+    renderWithClient(<CourseRecommendations missingSkills={['Programming']} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No courses available/i)).toBeInTheDocument();
+      expect(screen.getByText('No courses available for your skill gaps. Please check back later.')).toBeInTheDocument();
     });
   });
 
-  test('displays message when no missing skills are provided', () => {
-    render(<CourseRecommendations missingSkills={[]} />);
+  it('displays message when no missing skills are provided', () => {
+    renderWithClient(<CourseRecommendations missingSkills={[]} />);
     
     expect(screen.getByText('No skill gaps identified')).toBeInTheDocument();
     expect(screen.queryByTestId('course-card')).not.toBeInTheDocument();
   });
 
-  test('displays loading state when fetching courses', async () => {
-    mockFetch.mockImplementationOnce(() => new Promise(() => {})); // Never resolves
+  it('displays loading state when fetching courses', async () => {
+    (apiRequest as Mock).mockImplementationOnce(() => new Promise(() => {})); // Never resolves
 
-    render(<CourseRecommendations missingSkills={['Programming']} />);
+    renderWithClient(<CourseRecommendations missingSkills={['Programming']} />);
     
-    expect(screen.getByText(/Loading course recommendations.../i)).toBeInTheDocument();
+    expect(screen.getByText('Analyzing your profile and generating personalized recommendations...')).toBeInTheDocument();
   });
 
-  test('displays error state when API returns non-ok response', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-    });
+  it('displays error state when API returns non-ok response', async () => {
+    (apiRequest as Mock).mockRejectedValueOnce(new Error('Failed to fetch course recommendations'));
 
-    render(<CourseRecommendations missingSkills={['Programming']} />);
+    renderWithClient(<CourseRecommendations missingSkills={['Programming']} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch course recommendations/i)).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch course recommendations')).toBeInTheDocument();
     });
   });
 
-  test('does not fetch courses when no missing skills are provided', async () => {
-    render(<CourseRecommendations missingSkills={[]} />);
+  it('does not fetch courses when no missing skills are provided', async () => {
+    renderWithClient(<CourseRecommendations missingSkills={[]} />);
     
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(apiRequest).not.toHaveBeenCalled();
     expect(screen.getByText('No skill gaps identified')).toBeInTheDocument();
   });
 
-  test('displays multiple courses from API', async () => {
+  it('displays multiple courses from API', async () => {
     const mockApiCourses = [
       {
-        id: 1,
+        id: '1',
         title: 'Course 1',
         description: 'Description 1',
-        imageUrl: 'https://example.com/course1.jpg',
+        platform: 'Coursera',
+        difficulty: 'Beginner',
+        duration: '4-8 weeks',
         skills: ['Skill1'],
-        difficulty: 'beginner',
-        industry: 'Technology',
-        learningStyle: 'Visual',
-        timeCommitment: '4-8',
-        level: 'Beginner'
+        url: 'https://example.com/course1',
       },
       {
-        id: 2,
+        id: '2',
         title: 'Course 2',
         description: 'Description 2',
-        imageUrl: 'https://example.com/course2.jpg',
+        platform: 'Udemy',
+        difficulty: 'Intermediate',
+        duration: '8-12 weeks',
         skills: ['Skill2'],
-        difficulty: 'intermediate',
-        industry: 'Technology',
-        learningStyle: 'Practical',
-        timeCommitment: '4-8',
-        level: 'Intermediate'
+        url: 'https://example.com/course2',
       }
     ];
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockApiCourses,
-    });
+    (apiRequest as Mock).mockResolvedValueOnce(mockApiCourses);
 
-    render(<CourseRecommendations missingSkills={['Skill1', 'Skill2']} />);
+    renderWithClient(<CourseRecommendations missingSkills={['Skill1', 'Skill2']} />);
     
     await waitFor(() => {
       expect(screen.getByText('Course 1')).toBeInTheDocument();

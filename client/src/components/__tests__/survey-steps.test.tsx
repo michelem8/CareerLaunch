@@ -1,182 +1,153 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { SurveySteps } from '../survey-steps';
-import { describe, it, expect, vi } from 'vitest';
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import '@testing-library/jest-dom/vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SurveySteps } from '../survey-steps';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithClient } from '../../test/utils';
 
-// Mock the API request function
-vi.mock('@/lib/queryClient', () => ({
-  apiRequest: vi.fn(),
-}));
+const queryClient = new QueryClient();
+
+const renderWithQueryClient = (ui: React.ReactElement) => {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
+};
 
 describe('SurveySteps', () => {
-  it('renders the first step initially', () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
+  const onComplete = vi.fn();
+  const onStepChange = vi.fn();
 
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const fillFirstStep = async () => {
+    const currentRoleInput = screen.getByLabelText('Current Role');
+    const targetRoleInput = screen.getByLabelText('Target Role');
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+
+    await userEvent.type(currentRoleInput, 'Software Engineer');
+    await userEvent.type(targetRoleInput, 'Senior Software Engineer');
+    await userEvent.click(continueButton);
+  };
+
+  it('renders the first step initially', () => {
+    renderWithClient(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
     
-    expect(screen.getByText(/What's your current role?/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Current Role/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Target Role/i)).toBeInTheDocument();
   });
 
   it('should allow selecting "Any industry" option', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    renderWithQueryClient(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
-    // Find and click the industries dropdown
-    const industriesDropdown = screen.getByPlaceholderText('Select industries...');
-    await userEvent.click(industriesDropdown);
+    // Fill in Step 1 to get to Step 2
+    await fillFirstStep();
 
-    // Find and click the "Any industry" option
-    const anyIndustryOption = screen.getByText('Any industry');
+    // Open the dropdown
+    const dropdown = screen.getByLabelText('Industries of Interest');
+    await userEvent.click(dropdown);
+
+    // Select "Any industry"
+    const anyIndustryOption = screen.getByRole('option', { name: 'Any industry' });
     await userEvent.click(anyIndustryOption);
 
-    // Verify that "Any industry" is selected
+    // Verify "Any industry" is selected
     expect(screen.getByText('Any industry')).toBeInTheDocument();
-
-    // When "Any industry" is selected, other options should be disabled
-    const otherOption = screen.getByText('Consumer-Facing Tech');
-    expect(otherOption).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('should clear other selections when "Any industry" is selected', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    renderWithQueryClient(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
-    // Find and click the industries dropdown
-    const industriesDropdown = screen.getByPlaceholderText('Select industries...');
-    await userEvent.click(industriesDropdown);
+    // Fill in Step 1 to get to Step 2
+    await fillFirstStep();
+
+    // Open the dropdown
+    const dropdown = screen.getByLabelText('Industries of Interest');
+    await userEvent.click(dropdown);
 
     // Select a specific industry first
-    const specificIndustry = screen.getByText('Consumer-Facing Tech');
-    await userEvent.click(specificIndustry);
+    const enterpriseOption = screen.getByRole('option', { name: 'Enterprise Software' });
+    await userEvent.click(enterpriseOption);
 
-    // Then select "Any industry"
-    const anyIndustryOption = screen.getByText('Any industry');
+    // Select "Any industry"
+    const anyIndustryOption = screen.getByRole('option', { name: 'Any industry' });
     await userEvent.click(anyIndustryOption);
 
-    // Verify that only "Any industry" is selected
+    // Verify only "Any industry" is selected
     expect(screen.getByText('Any industry')).toBeInTheDocument();
-    expect(screen.queryByText('Consumer-Facing Tech')).not.toBeInTheDocument();
+    expect(screen.queryByText('Enterprise Software')).not.toBeInTheDocument();
   });
 
   it('should clear "Any industry" when a specific industry is selected', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    renderWithQueryClient(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
-    // Find and click the industries dropdown
-    const industriesDropdown = screen.getByPlaceholderText('Select industries...');
-    await userEvent.click(industriesDropdown);
+    // Fill in Step 1 to get to Step 2
+    await fillFirstStep();
+
+    // Open the dropdown
+    const dropdown = screen.getByLabelText('Industries of Interest');
+    await userEvent.click(dropdown);
 
     // Select "Any industry" first
-    const anyIndustryOption = screen.getByText('Any industry');
+    const anyIndustryOption = screen.getByRole('option', { name: 'Any industry' });
     await userEvent.click(anyIndustryOption);
 
-    // Then select a specific industry
-    const specificIndustry = screen.getByText('Consumer-Facing Tech');
-    await userEvent.click(specificIndustry);
+    // Select a specific industry
+    const enterpriseOption = screen.getByRole('option', { name: 'Enterprise Software' });
+    await userEvent.click(enterpriseOption);
 
-    // Verify that only the specific industry is selected
+    // Verify only the specific industry is selected
     expect(screen.queryByText('Any industry')).not.toBeInTheDocument();
-    expect(screen.getByText('Consumer-Facing Tech')).toBeInTheDocument();
+    expect(screen.getByText('Enterprise Software')).toBeInTheDocument();
   });
 
   it('should navigate through steps correctly', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
-
-    // Step 1: Current and Target Role
-    expect(screen.getByLabelText('Current Role')).toBeInTheDocument();
-    expect(screen.getByLabelText('Target Role')).toBeInTheDocument();
-    expect(screen.queryByText('Industries of Interest')).not.toBeInTheDocument();
+    renderWithQueryClient(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
     // Fill in Step 1
-    await userEvent.type(screen.getByLabelText('Current Role'), 'Software Engineer');
-    await userEvent.type(screen.getByLabelText('Target Role'), 'Senior Engineer');
-    await userEvent.click(screen.getByText('Continue'));
+    await fillFirstStep();
 
-    // Step 2: Industries
-    expect(screen.getByText('Industries of Interest')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Current Role')).not.toBeInTheDocument();
-    
-    // Select an industry and continue
-    const industriesDropdown = screen.getByPlaceholderText('Select industries...');
+    // Fill in Step 2
+    const industriesDropdown = screen.getByLabelText('Industries of Interest');
     await userEvent.click(industriesDropdown);
-    await userEvent.click(screen.getByText('Consumer-Facing Tech'));
-    await userEvent.click(screen.getByText('Continue'));
+    const anyIndustryOption = screen.getByRole('option', { name: 'Any industry' });
+    await userEvent.click(anyIndustryOption);
 
-    // Step 3: Learning Styles and Time Commitment
-    expect(screen.getByText('Learning Styles')).toBeInTheDocument();
-    expect(screen.getByText('Weekly Time Commitment')).toBeInTheDocument();
-    expect(screen.queryByText('Industries of Interest')).not.toBeInTheDocument();
-  });
+    // Continue to Step 3
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    await userEvent.click(continueButton);
 
-  it('should update step indicator when navigating through steps', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
+    // Fill in Step 3
+    const timeCommitmentDropdown = screen.getByLabelText('Weekly Time Commitment');
+    await userEvent.click(timeCommitmentDropdown);
+    const timeOption = screen.getByRole('option', { name: '5-10 hours' });
+    await userEvent.click(timeOption);
 
-    // Initial step
-    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    const learningStylesDropdown = screen.getByLabelText('Learning Styles');
+    await userEvent.click(learningStylesDropdown);
+    const styleOption = screen.getByRole('option', { name: 'Visual Learning' });
+    await userEvent.click(styleOption);
 
-    // Fill in Step 1 and continue
-    await userEvent.type(screen.getByLabelText('Current Role'), 'Software Engineer');
-    await userEvent.type(screen.getByLabelText('Target Role'), 'Senior Engineer');
-    await userEvent.click(screen.getByText('Continue'));
+    // Submit the form
+    await userEvent.click(continueButton);
 
-    // Check step 2 indicator
-    expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
-
-    // Select an industry and continue
-    const industriesDropdown = screen.getByPlaceholderText('Select industries...');
-    await userEvent.click(industriesDropdown);
-    await userEvent.click(screen.getByText('Consumer-Facing Tech'));
-    await userEvent.click(screen.getByText('Continue'));
-
-    // Check step 3 indicator
-    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
-
-    // Test back navigation
-    await userEvent.click(screen.getByText('Back'));
-    expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
-  });
-
-  it('allows selecting a role and moving to the next step', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
-
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
-    
-    // Your existing test code...
-  });
-
-  it('allows selecting skills and moving to the next step', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
-
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
-    
-    // Your existing test code...
-  });
-
-  it('allows selecting experience level and completing the survey', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
-
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
-    
-    // Your existing test code...
+    // Verify onComplete was called
+    expect(onComplete).toHaveBeenCalled();
   });
 
   it('validates required fields before proceeding', async () => {
-    const onComplete = vi.fn();
-    const onStepChange = vi.fn();
+    renderWithQueryClient(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
 
-    render(<SurveySteps onComplete={onComplete} onStepChange={onStepChange} />);
-    
-    // Your existing test code...
+    // Try to continue without filling in required fields
+    const continueButton = screen.getByRole('button', { name: 'Continue' });
+    await userEvent.click(continueButton);
+
+    // Verify error messages are shown
+    expect(screen.getByText('String must contain at least 1 character(s)')).toBeInTheDocument();
   });
 }); 

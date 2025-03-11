@@ -1,10 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { RoleCard } from '../src/pages/CareerDashboard';
+import { RoleCard } from '../CareerDashboard';
+import { describe, it, expect } from 'vitest';
 
 describe('RoleCard', () => {
-  const mockSkills = Array.from({ length: 10 }, (_, i) => ({ name: `Skill ${i + 1}` }));
+  const mockSkills = Array.from({ length: 10 }, (_, i) => `Skill ${i + 1}`);
   
   it('should initially show only first 2 skills and a "+X more" button', () => {
     render(
@@ -12,7 +13,6 @@ describe('RoleCard', () => {
         title="Current Role"
         subtitle="Software Engineer"
         skills={mockSkills}
-        showSkills={true}
       />
     );
 
@@ -31,7 +31,6 @@ describe('RoleCard', () => {
         title="Current Role"
         subtitle="Software Engineer"
         skills={mockSkills}
-        showSkills={true}
       />
     );
 
@@ -40,7 +39,7 @@ describe('RoleCard', () => {
 
     // Check that all skills are now visible
     mockSkills.forEach((skill) => {
-      expect(screen.getByText(skill.name)).toBeInTheDocument();
+      expect(screen.getByText(skill)).toBeInTheDocument();
     });
 
     // Check that there's now a "Show less" button
@@ -53,7 +52,6 @@ describe('RoleCard', () => {
         title="Current Role"
         subtitle="Software Engineer"
         skills={mockSkills}
-        showSkills={true}
       />
     );
 

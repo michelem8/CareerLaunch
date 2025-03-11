@@ -76,8 +76,13 @@ describe('User Profile Data Tests', () => {
 
     // Check if roles are displayed
     await waitFor(() => {
-      expect(screen.getByText('Product Manager')).toBeInTheDocument();
-      expect(screen.getByText('Engineering Manager')).toBeInTheDocument();
+      // Find the Current Role section and check its content
+      const currentRoleSection = screen.getByText('Current Role').closest('div');
+      expect(currentRoleSection).toHaveTextContent('Product Manager');
+
+      // Find the Target Role section and check its content
+      const targetRoleSection = screen.getByText('Target Role').closest('div');
+      expect(targetRoleSection).toHaveTextContent('Engineering Manager');
     });
   });
 
@@ -113,10 +118,12 @@ describe('User Profile Data Tests', () => {
     
     // Check if missing skills are displayed
     await waitFor(() => {
-      expect(screen.getByText('Engineering Leadership')).toBeInTheDocument();
-      expect(screen.getByText('Team Building')).toBeInTheDocument();
-      expect(screen.getByText('Technical Architecture')).toBeInTheDocument();
-      expect(screen.getByText('Cross-functional Communication')).toBeInTheDocument();
+      // Find the Target Role section which contains the missing skills
+      const targetRoleSection = screen.getByText('Target Role').closest('div');
+      expect(targetRoleSection).toHaveTextContent('Engineering Leadership');
+      expect(targetRoleSection).toHaveTextContent('Team Building');
+      expect(targetRoleSection).toHaveTextContent('Technical Architecture');
+      expect(targetRoleSection).toHaveTextContent('Cross-functional Communication');
     });
   });
 }); 

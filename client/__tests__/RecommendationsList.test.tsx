@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom';
-import { RecommendationsList } from '../components/RecommendationsList';
+import { RecommendationsList } from '../src/components/RecommendationsList';
 
 describe('RecommendationsList', () => {
   const mockRecommendations = [

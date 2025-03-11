@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { apiRequest, corsFixFetch } from '../lib/queryClient';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { apiRequest } from '../lib/queryClient';
 
 // Mock fetch to test CORS behavior
 global.fetch = vi.fn();
@@ -20,7 +20,7 @@ describe('CORS handling', () => {
 
   it('should handle API requests with relative URLs correctly', async () => {
     // Mock successful response
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as Mock).mockResolvedValueOnce({
       ok: true,
       status: 200,
       json: async () => ({ success: true }),
@@ -39,9 +39,39 @@ describe('CORS handling', () => {
 
   it('should handle CORS issues gracefully with fallback data', async () => {
     // Mock a CORS error
-    (global.fetch as jest.Mock).mockRejectedValueOnce(
+    (global.fetch as Mock).mockRejectedValueOnce(
       new TypeError('Failed to fetch')
     );
+
+    // Mock the second attempt with successful response
+    (global.fetch as Mock).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 1,
+        username: "demo_user",
+        currentRole: "Product Manager",
+        targetRole: "Engineering Manager",
+        skills: ["JavaScript", "React", "Node.js", "Project Management", "Product Development"],
+        hasCompletedSurvey: true,
+        resumeAnalysis: {
+          skills: ["JavaScript", "React", "Node.js", "Project Management", "Product Development"],
+          missingSkills: [
+            "Engineering Leadership",
+            "Team Building", 
+            "Technical Architecture",
+            "Cross-functional Communication"
+          ],
+          recommendations: [
+            "Focus on team building and leadership skills",
+            "Develop deeper technical architecture knowledge",
+            "Practice making technical decisions at scale"
+          ],
+          suggestedRoles: ["Technical Product Manager", "Engineering Manager", "Development Team Lead"]
+        }
+      }),
+      text: async () => 'success'
+    });
 
     // Test API request with a path that has mock data
     const response = await apiRequest('GET', '/api/users/me');
@@ -61,7 +91,7 @@ describe('CORS handling', () => {
       writable: true
     });
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as Mock).mockResolvedValueOnce({
       ok: true,
       status: 200,
       json: async () => ({ success: true }),

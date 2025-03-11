@@ -1,46 +1,49 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { CareerDashboard, User, CareerDashboardProps } from '../src/components/CareerDashboard';
 
+// Mock user data
+const mockUserData: User = {
+  currentRole: 'Senior Product Manager',
+  targetRole: 'Software Engineer',
+  skills: ['Product Strategy', 'User Research'],
+  resumeAnalysis: {
+    skills: ['Product Strategy', 'User Research'],
+    missingSkills: ['Core Programming Skills', 'Data Structures and Algorithms'],
+    recommendations: ['Focus on learning programming fundamentals'],
+    suggestedRoles: ['Technical Product Manager', 'Engineering Manager']
+  }
+};
+
 // Mock fetch
-global.fetch = jest.fn(() =>
+vi.stubGlobal('fetch', vi.fn(() =>
   Promise.resolve({
-    json: () => Promise.resolve({
-      currentRole: 'Senior Product Manager',
-      targetRole: 'Software Engineer',
-      skills: ['Product Strategy', 'User Research'],
-      resumeAnalysis: {
-        skills: ['Product Strategy', 'User Research'],
-        missingSkills: ['Core Programming Skills', 'Data Structures and Algorithms'],
-        recommendations: ['Focus on learning programming fundamentals'],
-        suggestedRoles: ['Technical Product Manager', 'Engineering Manager']
-      }
-    }),
+    json: () => Promise.resolve(mockUserData),
   })
-) as jest.Mock;
+));
 
 describe('CareerDashboard', () => {
   beforeEach(() => {
-    (global.fetch as jest.Mock).mockClear();
+    vi.mocked(fetch).mockClear();
   });
 
   it('renders the dashboard title', async () => {
-    render(<CareerDashboard />);
+    render(<CareerDashboard user={mockUserData} />);
     expect(screen.getByText('Your Career Dashboard')).toBeInTheDocument();
   });
 
   it('displays all three role sections', async () => {
-    render(<CareerDashboard />);
+    render(<CareerDashboard user={mockUserData} />);
     expect(screen.getByText('Current Role')).toBeInTheDocument();
     expect(screen.getByText('Target Role')).toBeInTheDocument();
-    expect(screen.getByText('Suggested Role')).toBeInTheDocument();
+    expect(screen.getByText('Suggested Roles')).toBeInTheDocument();
   });
 
   it('fetches and displays user data', async () => {
-    render(<CareerDashboard />);
-    expect(global.fetch).toHaveBeenCalledWith('/api/users/me');
+    render(<CareerDashboard user={mockUserData} />);
+    expect(fetch).toHaveBeenCalledWith('/api/users/me');
   });
 
   const mockUser: User = {
@@ -56,13 +59,7 @@ describe('CareerDashboard', () => {
       suggestedRoles: ['Tech Lead', 'Senior Backend Engineer'],
       skills: ['JavaScript', 'React', 'Node.js'],
       missingSkills: ['System Design', 'Distributed Systems', 'Leadership']
-    },
-    id: 1,
-    username: 'testuser',
-    password: 'testpass',
-    hasCompletedSurvey: true,
-    surveyStep: 3,
-    preferences: null
+    }
   };
 
   it('displays recommendations from resume analysis', () => {
@@ -79,8 +76,10 @@ describe('CareerDashboard', () => {
     const userWithoutRecommendations: User = {
       ...mockUser,
       resumeAnalysis: {
-        ...mockUser.resumeAnalysis,
-        recommendations: []
+        skills: mockUser.resumeAnalysis!.skills,
+        missingSkills: mockUser.resumeAnalysis!.missingSkills,
+        recommendations: [],
+        suggestedRoles: mockUser.resumeAnalysis!.suggestedRoles
       }
     };
     
