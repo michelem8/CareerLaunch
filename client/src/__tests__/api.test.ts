@@ -24,40 +24,55 @@ describe('API Utils', () => {
   });
   
   describe('getApiBaseUrl', () => {
-    it('should use VITE_API_URL when available', () => {
-      vi.stubGlobal('import.meta.env', {
-        ...originalEnv,
-        VITE_API_URL: 'https://test-api.example.com'
-      });
+    const originalWindow = global.window;
+    const originalEnv = process.env;
+    
+    beforeEach(() => {
+      // Mock window.location for tests
+      delete global.window;
+      global.window = Object.create(originalWindow);
       
-      expect(getApiBaseUrl()).toBe('https://test-api.example.com');
+      // Reset environment variables
+      vi.resetModules();
+      
+      // Mock import.meta.env
+      vi.stubGlobal('import', {
+        meta: {
+          env: {
+            MODE: 'development',
+            VITE_API_URL: undefined
+          }
+        }
+      });
     });
     
-    it('should return empty string in production on careerpathfinder.io', () => {
-      vi.stubGlobal('import.meta.env', {
-        ...originalEnv,
-        MODE: 'production',
-        VITE_API_URL: '' // Empty string to simulate production env file
-      });
-      
-      // Mock production domain
-      Object.defineProperty(window, 'location', {
-        value: {
-          hostname: 'app.careerpathfinder.io'
-        },
-        writable: true
-      });
-      
+    afterEach(() => {
+      global.window = originalWindow;
+      vi.unstubAllGlobals();
+    });
+    
+    it('should use VITE_API_URL when available', () => {
+      import.meta.env.VITE_API_URL = 'https://api.example.com';
+      expect(getApiBaseUrl()).toBe('https://api.example.com');
+    });
+    
+    it('should use empty string for production on careerpathfinder.io', () => {
+      import.meta.env.MODE = 'production';
+      import.meta.env.VITE_API_URL = undefined;
+      global.window.location = { hostname: 'careerpathfinder.io' } as Location;
       expect(getApiBaseUrl()).toBe('');
     });
     
-    it('should return development fallback when not in production', () => {
-      vi.stubGlobal('import.meta.env', {
-        ...originalEnv,
-        MODE: 'development',
-        VITE_API_URL: undefined
-      });
-      
+    it('should use empty string for production on www.careerpathfinder.io', () => {
+      import.meta.env.MODE = 'production';
+      import.meta.env.VITE_API_URL = undefined;
+      global.window.location = { hostname: 'www.careerpathfinder.io' } as Location;
+      expect(getApiBaseUrl()).toBe('');
+    });
+    
+    it('should use localhost fallback for development', () => {
+      import.meta.env.MODE = 'development';
+      import.meta.env.VITE_API_URL = undefined;
       expect(getApiBaseUrl()).toBe('http://localhost:3001');
     });
   });

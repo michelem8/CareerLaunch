@@ -390,6 +390,21 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Create a test endpoint for API connectivity
+  app.get('/api/test', (req, res) => {
+    res.status(200).json({ 
+      success: true,
+      message: 'API connection successful',
+      info: {
+        timestamp: new Date().toISOString(),
+        clientOrigin: req.headers.origin,
+        hostname: req.hostname,
+        path: req.path,
+        method: req.method
+      }
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

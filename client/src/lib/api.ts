@@ -17,11 +17,11 @@ export const getApiBaseUrl = (): string => {
 
   // In production environment on main domain, use relative URLs
   if (isProduction && isProductionDomain) {
-    return '';
+    return '';  // Use relative URLs in production
   }
 
   // Development fallback
-  return 'http://localhost:3001';
+  return 'http://localhost:3001';  // Match server port from server/index.ts
 };
 
 /**
@@ -32,7 +32,12 @@ export const getApiBaseUrl = (): string => {
  */
 export const getApiUrl = (endpoint: string): string => {
   const baseUrl = getApiBaseUrl();
-  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  // Make sure endpoint starts with /api/
+  let normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (!normalizedEndpoint.startsWith('/api/') && !normalizedEndpoint.includes('/api/')) {
+    normalizedEndpoint = `/api${normalizedEndpoint}`;
+  }
   
   return `${baseUrl}${normalizedEndpoint}`;
 };
@@ -77,6 +82,7 @@ export const testApiConnectivity = async (): Promise<{
   success: boolean;
   error?: string;
   url?: string;
+  details?: any;
 }> => {
   try {
     const url = getApiUrl('/api/test');
@@ -95,20 +101,43 @@ export const testApiConnectivity = async (): Promise<{
       const data = await response.json();
       return { 
         success: true,
-        url
+        url,
+        details: data
       };
     } else {
+      let errorDetail;
+      try {
+        // Try to parse error details if they exist
+        errorDetail = await response.json();
+      } catch (e) {
+        // If parsing fails, just use the status text
+        errorDetail = response.statusText;
+      }
+      
       return { 
         success: false,
         error: `API responded with status: ${response.status}`,
-        url
+        url,
+        details: {
+          status: response.status,
+          statusText: response.statusText,
+          redirected: response.redirected,
+          url: response.url,
+          errorDetail
+        }
       };
     }
   } catch (error) {
+    console.error("API connectivity test failed:", error.message);
     return {
       success: false,
       error: error.message,
-      url: getApiUrl('/api/test')
+      url: getApiUrl('/api/test'),
+      details: {
+        name: error.name,
+        stack: error.stack,
+        isCORS: error.message?.includes('CORS')
+      }
     };
   }
 }; 

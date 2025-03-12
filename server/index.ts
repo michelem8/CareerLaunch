@@ -28,13 +28,31 @@ const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 // Configure CORS
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [
+      'https://careerpathfinder.io',
+      'https://www.careerpathfinder.io',
+      'https://api.careerpathfinder.io'
+    ] 
+  : ['http://localhost:5173']; // Vite's default development port
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://careerpathfinder.io', 'https://www.careerpathfinder.io'] 
-    : 'http://localhost:5173', // Vite's default development port
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin is in our allowed list
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
+    
+    // Log rejected origins for debugging
+    console.warn(`Origin rejected by CORS policy: ${origin}`);
+    return callback(null, false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
 
 // Parse JSON bodies
@@ -63,7 +81,15 @@ app.use((req, res, next) => {
   // Skip redirects for OPTIONS requests to prevent CORS preflight issues
   if (req.method === 'OPTIONS') {
     // Set proper CORS headers directly
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    const origin = req.headers.origin;
+    
+    // Check if origin is allowed
+    if (origin && (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production')) {
+      res.header('Access-Control-Allow-Origin', origin);
+    } else {
+      res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
+    }
+    
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
     res.header('Access-Control-Allow-Credentials', 'true');
