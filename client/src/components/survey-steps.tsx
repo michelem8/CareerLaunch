@@ -12,6 +12,8 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { useState } from "react";
 import { z } from "zod";
 import { getApiUrl } from "@/lib/api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Add test function to diagnose API connectivity
 const testApiEndpoint = async () => {
@@ -32,16 +34,92 @@ const testApiEndpoint = async () => {
     if (response.ok) {
       const data = await response.json();
       console.log("Test endpoint response:", data);
-      return true;
+      return { success: true, data };
     } else {
       console.error("Test endpoint failed with status:", response.status);
-      return false;
+      return { success: false, status: response.status };
     }
   } catch (error) {
     console.error("Error testing API endpoint:", error);
-    return false;
+    return { success: false, error: error.message };
   }
 };
+
+// CORS Test Component
+function ApiConnectivityTest() {
+  const [testResult, setTestResult] = useState<null | {
+    success: boolean;
+    data?: any;
+    status?: number;
+    error?: string;
+  }>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const runTest = async () => {
+    setIsLoading(true);
+    try {
+      const result = await testApiEndpoint();
+      setTestResult(result);
+    } catch (error) {
+      setTestResult({ success: false, error: error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>API Connectivity Test</CardTitle>
+        <CardDescription>
+          Test the connection to the API server to diagnose any CORS issues
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button 
+          onClick={runTest} 
+          disabled={isLoading}
+          variant="outline"
+          className="mb-4"
+        >
+          {isLoading ? "Testing..." : "Run API Test"}
+        </Button>
+        
+        {testResult && (
+          <Alert variant={testResult.success ? "default" : "destructive"}>
+            <AlertTitle>
+              {testResult.success ? "API Connection Successful" : "API Connection Failed"}
+            </AlertTitle>
+            <AlertDescription>
+              {testResult.success ? (
+                <div>
+                  <p>Successfully connected to the API server.</p>
+                  {testResult.data && (
+                    <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
+                      {JSON.stringify(testResult.data, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <p>Failed to connect to the API server.</p>
+                  {testResult.status && <p>Status: {testResult.status}</p>}
+                  {testResult.error && <p>Error: {testResult.error}</p>}
+                  {testResult.error?.includes('CORS') && (
+                    <p className="text-red-500 font-bold mt-2">
+                      CORS Error Detected: The API server is not allowing requests from this domain.
+                      Try using a relative URL instead of an absolute URL.
+                    </p>
+                  )}
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 type SurveyStepsProps = {
   onComplete: () => void;
@@ -90,6 +168,7 @@ const LEARNING_STYLES = [
 
 export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [showApiTest, setShowApiTest] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const totalSteps = 3;
@@ -348,133 +427,155 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-        {currentStep === 1 && (
-          <>
+    <div className="max-w-2xl mx-auto p-4">
+      {/* Add API Connectivity Test with toggle */}
+      <div className="mb-6">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => setShowApiTest(!showApiTest)}
+          className="text-muted-foreground hover:text-primary"
+        >
+          {showApiTest ? "Hide API Test" : "Show API Test"}
+        </Button>
+        
+        {showApiTest && <ApiConnectivityTest />}
+      </div>
+  
+      <h1 className="text-2xl font-bold mb-6">
+        {currentStep === 1 && "Your Career Goals"}
+        {currentStep === 2 && "Your Skills & Experience"}
+        {currentStep === 3 && "Your Learning Preferences"}
+      </h1>
+      
+      <Form {...form}>
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+          {currentStep === 1 && (
+            <>
+              <FormField
+                control={form.control}
+                name="currentRole"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Role</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Software Engineer" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="targetRole"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target Role</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Senior Software Engineer" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+
+          {currentStep === 2 && (
             <FormField
               control={form.control}
-              name="currentRole"
+              name="preferences.preferredIndustries"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Role</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Software Engineer" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="targetRole"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Target Role</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Senior Software Engineer" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        )}
-
-        {currentStep === 2 && (
-          <FormField
-            control={form.control}
-            name="preferences.preferredIndustries"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Industries of Interest</FormLabel>
-                <FormControl>
-                  <MultiSelect
-                    options={INDUSTRIES}
-                    selected={field.value || []}
-                    onChange={handleIndustryChange}
-                    placeholder="Select industries..."
-                    disabledOptions={field.value?.includes("any") ? INDUSTRIES.filter(i => i.value !== "any").map(i => i.value) : []}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        {currentStep === 3 && (
-          <>
-            <FormField
-              control={form.control}
-              name="preferences.learningStyles"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Learning Styles</FormLabel>
+                  <FormLabel>Industries of Interest</FormLabel>
                   <FormControl>
                     <MultiSelect
-                      options={LEARNING_STYLES}
+                      options={INDUSTRIES}
                       selected={field.value || []}
-                      onChange={field.onChange}
-                      placeholder="Select learning styles..."
+                      onChange={handleIndustryChange}
+                      placeholder="Select industries..."
+                      disabledOptions={field.value?.includes("any") ? INDUSTRIES.filter(i => i.value !== "any").map(i => i.value) : []}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+          )}
 
-            <FormField
-              control={form.control}
-              name="preferences.timeCommitment"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Weekly Time Commitment</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+          {currentStep === 3 && (
+            <>
+              <FormField
+                control={form.control}
+                name="preferences.learningStyles"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Learning Styles</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select time commitment" />
-                      </SelectTrigger>
+                      <MultiSelect
+                        options={LEARNING_STYLES}
+                        selected={field.value || []}
+                        onChange={field.onChange}
+                        placeholder="Select learning styles..."
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="2-4">2-4 hours</SelectItem>
-                      <SelectItem value="4-8">4-8 hours</SelectItem>
-                      <SelectItem value="8+">8+ hours</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        <div className="flex justify-between">
-          {currentStep > 1 && (
+              <FormField
+                control={form.control}
+                name="preferences.timeCommitment"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Weekly Time Commitment</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select time commitment" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="2-4">2-4 hours</SelectItem>
+                        <SelectItem value="4-8">4-8 hours</SelectItem>
+                        <SelectItem value="8+">8+ hours</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+
+          <div className="flex justify-between">
+            {currentStep > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const prevStep = currentStep - 1;
+                  if (isValidStep(prevStep)) {
+                    updateStep(prevStep);
+                  }
+                }}
+              >
+                Back
+              </Button>
+            )}
             <Button
               type="button"
-              variant="outline"
-              onClick={() => {
-                const prevStep = currentStep - 1;
-                if (isValidStep(prevStep)) {
-                  updateStep(prevStep);
-                }
-              }}
+              className={currentStep === 1 ? "w-full" : ""}
+              onClick={handleContinue}
+              disabled={isPending}
             >
-              Back
+              {currentStep === 3 ? (isPending ? "Saving..." : "Submit") : "Continue"}
             </Button>
-          )}
-          <Button
-            type="button"
-            className={currentStep === 1 ? "w-full" : ""}
-            onClick={handleContinue}
-            disabled={isPending}
-          >
-            {currentStep === 3 ? (isPending ? "Saving..." : "Submit") : "Continue"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }

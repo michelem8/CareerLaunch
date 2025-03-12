@@ -15,7 +15,7 @@ export const getApiBaseUrl = (): string => {
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
   const isProductionDomain = hostname.includes('careerpathfinder.io');
 
-  // In production environment on main domain, use relative URLs
+  // In production environment on main domain, use relative URLs to avoid CORS issues
   if (isProduction && isProductionDomain) {
     return '';  // Use relative URLs in production
   }
@@ -37,6 +37,11 @@ export const getApiUrl = (endpoint: string): string => {
   let normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   if (!normalizedEndpoint.startsWith('/api/') && !normalizedEndpoint.includes('/api/')) {
     normalizedEndpoint = `/api${normalizedEndpoint}`;
+  }
+  
+  // In production with www subdomain, we need to use relative URLs to avoid CORS issues
+  if (typeof window !== 'undefined' && window.location.hostname.includes('careerpathfinder.io')) {
+    return normalizedEndpoint;
   }
   
   return `${baseUrl}${normalizedEndpoint}`;

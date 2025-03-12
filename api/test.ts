@@ -4,9 +4,21 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 export default function handler(req: VercelRequest, res: VercelResponse) {
   console.log('==== TEST ENDPOINT CALLED ====');
   
+  // Get the request origin
+  const origin = req.headers.origin;
+  
+  // Allow both www and non-www domains
+  const allowedOrigins = [
+    'https://careerpathfinder.io',
+    'https://www.careerpathfinder.io'
+  ];
+  
+  // Set origin based on the request or default to the first allowed origin
+  const corsOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', corsOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -27,6 +39,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     method: req.method,
     url: req.url,
     headers: req.headers,
+    cors: {
+      allowedOrigins,
+      requestOrigin: origin,
+      responseOrigin: corsOrigin
+    },
     serverInfo: {
       platform: process.platform,
       arch: process.arch,
