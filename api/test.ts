@@ -7,23 +7,15 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   // Get the request origin
   const origin = req.headers.origin;
   
-  // Allow both www and non-www domains
-  const allowedOrigins = [
-    'https://careerpathfinder.io',
-    'https://www.careerpathfinder.io'
-  ];
-  
-  // Set origin based on the request or default to the first allowed origin
-  const corsOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-  
-  // Set CORS headers
+  // Set CORS headers - allow all origins in production for testing
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
+  res.setHeader('Content-Type', 'application/json');
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -40,9 +32,8 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     url: req.url,
     headers: req.headers,
     cors: {
-      allowedOrigins,
       requestOrigin: origin,
-      responseOrigin: corsOrigin
+      responseOrigin: origin || '*'
     },
     serverInfo: {
       platform: process.platform,

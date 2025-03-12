@@ -15,13 +15,14 @@ export const getApiBaseUrl = (): string => {
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
   const isProductionDomain = hostname.includes('careerpathfinder.io');
 
-  // In production environment, use relative URLs
+  // In production environment, use the current origin
   if (isProduction && isProductionDomain) {
-    return '';  // Use relative URLs in production
+    // Use the current origin to avoid CORS issues
+    return typeof window !== 'undefined' ? window.location.origin : '';
   }
 
   // Development fallback
-  return 'http://localhost:3000';  // Match the port from .env
+  return 'http://localhost:3001';  // Match the port from .env
 };
 
 /**
