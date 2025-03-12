@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { SurveySteps } from "@/components/survey-steps";
 import { ResumeUpload } from "@/components/resume-upload";
 import { Progress } from "@/components/ui/progress";
+import { queryClient } from "@/lib/queryClient";
 
 // Enhanced CORS testing function with better diagnostics
 const testCors = async () => {
@@ -343,10 +344,66 @@ export default function Survey() {
 
   const handleComplete = async () => {
     try {
-      await apiRequest("POST", "/api/survey/complete");
+      console.log("Attempting to complete survey...");
+      
+      // Add retry logic for the survey completion endpoint
+      let attempts = 0;
+      const maxAttempts = 3;
+      let lastError = null;
+      
+      while (attempts < maxAttempts) {
+        try {
+          console.log(`Completion attempt ${attempts + 1}/${maxAttempts}`);
+          
+          // Use fetch directly with more control over the request
+          const response = await fetch('/api/survey/complete', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            credentials: 'include',
+            mode: 'cors'
+          });
+          
+          console.log('Survey completion response status:', response.status);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Survey completion error response:', errorText);
+            throw new Error(`Failed to complete survey: ${response.status} ${response.statusText}`);
+          }
+          
+          console.log('Survey completed successfully');
+          
+          // Invalidate user data cache to ensure fresh data
+          queryClient.invalidateQueries({ queryKey: ['user'] });
+          
+          // Navigate to dashboard
+          navigate("/dashboard");
+          return;
+        } catch (err) {
+          console.error(`Error in completion attempt ${attempts + 1}:`, err);
+          lastError = err;
+          attempts++;
+          
+          if (attempts >= maxAttempts) {
+            break;
+          }
+          
+          // Wait before retry (increasing delay with each attempt)
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        }
+      }
+      
+      console.error("All survey completion attempts failed");
+      alert(`Failed to complete survey after ${maxAttempts} attempts. You may still be able to view your dashboard, but some data might be missing.`);
+      
+      // Try to navigate to dashboard anyway
       navigate("/dashboard");
     } catch (error) {
       console.error("Failed to complete survey:", error);
+      alert("Failed to complete survey. Please try again or contact support if the problem persists.");
     }
   };
 
