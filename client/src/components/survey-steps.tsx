@@ -142,7 +142,12 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
           
           try {
             errorJson = JSON.parse(errorText);
-            throw new Error(errorJson.error || `Server error: ${response.status}`);
+            // Handle structured error responses
+            if (errorJson.error && typeof errorJson.error === 'object') {
+              throw new Error(JSON.stringify(errorJson));
+            } else {
+              throw new Error(errorJson.error || `Server error: ${response.status}`);
+            }
           } catch (parseError) {
             // If we can't parse the JSON, use the raw text or status code
             throw new Error(errorText || `Server error: ${response.status}`);
@@ -197,9 +202,33 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
     },
     onError: (error: Error) => {
       console.error("Role save error:", error);
+      
+      // Try to parse structured error from JSON string
+      let errorMessage = "Failed to save your roles. Please try again.";
+      try {
+        // Check if the error is a stringified JSON object
+        if (error.message.startsWith('{') && error.message.endsWith('}')) {
+          const errorJson = JSON.parse(error.message);
+          if (errorJson.error) {
+            if (typeof errorJson.error === 'object' && errorJson.error.message) {
+              errorMessage = errorJson.error.message;
+              // Add details if available
+              if (errorJson.error.details) {
+                console.error("Error details:", errorJson.error.details);
+              }
+            } else {
+              errorMessage = String(errorJson.error);
+            }
+          }
+        }
+      } catch (e) {
+        // If we can't parse the JSON, use the original error message
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to save roles. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
