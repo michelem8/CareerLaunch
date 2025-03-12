@@ -23,7 +23,27 @@ export class MemStorage implements IStorage {
     this.courses = new Map();
     this.currentId = 1;
     this.initializeCourses();
+    this.initializeDefaultUser();
     console.log("MemStorage initialized with courses:", this.courses.size);
+    console.log("Default user created with ID:", 1);
+  }
+
+  private initializeDefaultUser() {
+    console.log("Initializing default user");
+    const defaultUser: User = {
+      id: 1,
+      username: "demo_user",
+      password: "demo_password",
+      currentRole: null,
+      targetRole: null,
+      skills: [],
+      resumeAnalysis: null,
+      preferences: null,
+      hasCompletedSurvey: false,
+      surveyStep: 1
+    };
+    this.users.set(1, defaultUser);
+    this.currentId = 2; // Next ID will be 2
   }
 
   private initializeCourses() {
@@ -33,56 +53,56 @@ export class MemStorage implements IStorage {
         id: 1,
         title: "Advanced Project Management",
         description: "Master modern project management methodologies",
-        imageUrl: "https://images.unsplash.com/photo-1557804483-ef3ae78eca57",
+        platform: "Coursera",
+        difficulty: "Intermediate",
+        duration: "8 weeks",
         skills: ["project management", "leadership", "agile"],
-        difficulty: "intermediate",
-        industry: "enterprise-software",
-        learningStyle: "practical",
-        timeCommitment: "4-8",
-        level: "intermediate"
+        url: "https://example.com/course1",
+        price: "$49.99",
+        rating: 4.7
       },
       {
         id: 2,
         title: "Data Analysis Fundamentals",
         description: "Learn essential data analysis techniques",
-        imageUrl: "https://images.unsplash.com/photo-1555421689-3f034debb7a6",
+        platform: "Udemy",
+        difficulty: "Beginner",
+        duration: "4 weeks",
         skills: ["data analysis", "statistics", "excel"],
-        difficulty: "beginner",
-        industry: "data-analytics",
-        learningStyle: "hands-on",
-        timeCommitment: "2-4",
-        level: "beginner"
+        url: "https://example.com/course2",
+        price: "$29.99",
+        rating: 4.5
       },
       {
         id: 3,
         title: "Product Management Leadership",
         description: "Advanced strategies for product leadership",
-        imageUrl: "https://images.unsplash.com/photo-1552664730-d307ca884978",
+        platform: "edX",
+        difficulty: "Advanced",
+        duration: "12 weeks",
         skills: ["product management", "leadership", "strategy"],
-        difficulty: "advanced",
-        industry: "product-management",
-        learningStyle: "project_based",
-        timeCommitment: "4-8",
-        level: "advanced"
+        url: "https://example.com/course3",
+        price: "$99.99",
+        rating: 4.9
       },
       {
         id: 4,
         title: "Technical Team Leadership",
         description: "Lead technical teams effectively",
-        imageUrl: "https://images.unsplash.com/photo-1516321165247-4aa89a48be28",
+        platform: "LinkedIn Learning",
+        difficulty: "Intermediate",
+        duration: "6 weeks",
         skills: ["leadership", "team management", "technical communication"],
-        difficulty: "intermediate",
-        industry: "enterprise-software",
-        learningStyle: "interactive",
-        timeCommitment: "4-8",
-        level: "intermediate"
+        url: "https://example.com/course4",
+        price: "$39.99",
+        rating: 4.6
       },
     ];
 
     console.log("Sample courses created:", sampleCourses);
     sampleCourses.forEach(course => {
       console.log(`Adding course to storage: ${course.title}`);
-      this.courses.set(course.id, course);
+      this.courses.set(Number(course.id), course);
     });
     console.log("Finished initializing courses. Total courses:", this.courses.size);
   }
@@ -90,7 +110,17 @@ export class MemStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     console.log("Getting user with id:", id);
     const user = this.users.get(id);
-    console.log("Found user:", user);
+    console.log("Found user:", user ? JSON.stringify(user) : "undefined");
+    
+    // If user is still not found (edge case in serverless), create a default one
+    if (!user && id === 1) {
+      console.log("Creating default user on-demand");
+      return this.createUser({
+        username: "demo_user",
+        password: "demo_password"
+      });
+    }
+    
     return user;
   }
 
