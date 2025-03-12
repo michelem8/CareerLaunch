@@ -55,6 +55,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
 
+// Add a debug endpoint to check CORS headers
+app.options('/api/test', (req, res) => {
+  res.status(200).end();
+});
+
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'API is working correctly',
+    cors: 'enabled',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));

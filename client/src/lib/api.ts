@@ -12,12 +12,9 @@ export const getApiBaseUrl = (): string => {
 
   // Check if we're in production on the main domain
   const isProduction = import.meta.env.MODE === 'production';
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isProductionDomain = hostname.includes('careerpathfinder.io');
-
-  // In production environment, use the current origin
-  if (isProduction && isProductionDomain) {
-    // Use the current origin to avoid CORS issues
+  
+  // In production environment, use the current origin to avoid CORS issues
+  if (isProduction) {
     return typeof window !== 'undefined' ? window.location.origin : '';
   }
 
