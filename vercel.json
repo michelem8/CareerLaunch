@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "https://www.careerpathfinder.io/:path*",
+      "destination": "https://careerpathfinder.io/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
