@@ -58,19 +58,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log('Sending successful mock response');
       res.status(200).json(mockUser);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in simplified roles endpoint:', error);
       console.error('Full error details:', error instanceof Error ? error.stack : 'No stack trace');
       
       // Improved error handling with proper status codes
-      if (error.name === 'ZodError') {
+      if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
         // Validation error
-        console.error('Validation error details:', JSON.stringify(error.errors, null, 2));
+        console.error('Validation error details:', JSON.stringify((error as any).errors, null, 2));
         return res.status(400).json({ 
           error: { 
             code: '400', 
             message: 'Invalid input data',
-            details: error.errors 
+            details: (error as any).errors 
           }
         });
       } else {

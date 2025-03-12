@@ -1,14 +1,15 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { storage } from '../../server/storage';
+import { ResumeAnalysis } from '../../shared/schema';
 
 // Fallback data only for development environment
-const getResumeAnalysis = () => {
+const getResumeAnalysis = (): ResumeAnalysis => {
   // Only use fallback data in development
   if (process.env.NODE_ENV === 'development') {
     return {
       skills: ["JavaScript", "React", "Node.js"],
-      experience: [],
-      education: [],
+      experience: ["3 years of frontend development", "1 year of backend development"],
+      education: ["BS in Computer Science"],
       suggestedRoles: ["Engineering Manager", "Technical Lead", "Product Manager"],
       missingSkills: [
         "Technical Leadership", 
@@ -25,8 +26,15 @@ const getResumeAnalysis = () => {
     };
   }
   
-  // In production, return null to indicate no analysis is available yet
-  return null;
+  // In production, return empty arrays instead of null
+  return {
+    skills: [],
+    experience: [],
+    education: [],
+    suggestedRoles: [],
+    missingSkills: [],
+    recommendations: []
+  };
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
