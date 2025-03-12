@@ -369,9 +369,32 @@ export default function Survey() {
           console.log('Survey completion response status:', response.status);
           
           if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Survey completion error response:', errorText);
-            throw new Error(`Failed to complete survey: ${response.status} ${response.statusText}`);
+            let errorMessage = `Failed to complete survey: ${response.status}`;
+            let errorDetails = '';
+            
+            try {
+              const errorText = await response.text();
+              console.error('Survey completion error response:', errorText);
+              
+              // Try to parse the error as JSON
+              if (errorText && errorText.includes('{')) {
+                const errorJson = JSON.parse(errorText);
+                if (errorJson.error) {
+                  if (typeof errorJson.error === 'string') {
+                    errorMessage = errorJson.error;
+                  } else if (errorJson.error.message) {
+                    errorMessage = errorJson.error.message;
+                    if (errorJson.error.details) {
+                      errorDetails = errorJson.error.details;
+                    }
+                  }
+                }
+              }
+            } catch (parseError) {
+              console.error('Failed to parse error response:', parseError);
+            }
+            
+            throw new Error(errorMessage);
           }
           
           console.log('Survey completed successfully');
@@ -397,9 +420,14 @@ export default function Survey() {
       }
       
       console.error("All survey completion attempts failed");
-      alert(`Failed to complete survey after ${maxAttempts} attempts. You may still be able to view your dashboard, but some data might be missing.`);
-      
-      // Try to navigate to dashboard anyway
+      const errorMessage = lastError instanceof Error 
+        ? lastError.message 
+        : 'Unknown error occurred';
+
+      alert(`We're having trouble completing your survey. We'll direct you to your dashboard, but some content may be missing. Please try again later or contact support.\n\nError: ${errorMessage}`);
+
+      // Still navigate to dashboard even on error
+      queryClient.invalidateQueries({ queryKey: ['user'] });
       navigate("/dashboard");
     } catch (error) {
       console.error("Failed to complete survey:", error);

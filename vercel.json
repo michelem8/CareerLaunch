@@ -5,6 +5,10 @@
       "destination": "/api/survey/roles"
     },
     {
+      "source": "/api/survey/complete",
+      "destination": "/api/survey/complete"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

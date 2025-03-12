@@ -4,6 +4,8 @@ import { getSkillGapAnalysis } from '../../server/openai';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('==== API HANDLER START: /api/survey/complete ====');
+  console.log('Request method:', req.method);
+  console.log('Environment:', process.env.NODE_ENV);
   
   // Always set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -29,17 +31,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const userId = 1; // In a real app, get from session
       console.log('Fetching user data for ID:', userId);
       
-      let user = await storage.getUser(userId);
-      console.log('User data retrieved:', user ? 'Success' : 'Not found');
+      let user;
+      try {
+        user = await storage.getUser(userId);
+        console.log('User data retrieved:', user ? 'Success' : 'Not found');
+      } catch (userError) {
+        console.error('Error fetching user:', userError);
+        throw new Error(`Failed to fetch user: ${userError instanceof Error ? userError.message : 'Unknown error'}`);
+      }
       
       if (!user) {
         console.log('Creating default user since none was found');
         // Create a default user if none exists
-        user = await storage.createUser({
-          username: "demo_user",
-          password: "demo_password"
-        });
-        console.log('Default user created:', user);
+        try {
+          user = await storage.createUser({
+            username: "demo_user",
+            password: "demo_password"
+          });
+          console.log('Default user created:', user);
+        } catch (createError) {
+          console.error('Error creating default user:', createError);
+          throw new Error(`Failed to create default user: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
+        }
       }
 
       // If we have both roles and skills, perform skill gap analysis
@@ -48,8 +61,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('Target role:', user.targetRole);
         console.log('Current skills:', user.skills);
         
+        let skillGap;
         try {
-          const skillGap = await getSkillGapAnalysis(
+          skillGap = await getSkillGapAnalysis(
             user.skills,
             user.targetRole,
             { currentRole: user.currentRole || undefined }
@@ -98,8 +112,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           };
           
           console.log('Using fallback analysis data');
-          user = await storage.updateUserResumeAnalysis(userId, fallbackAnalysis);
-          console.log('User resume analysis updated with fallback data');
+          try {
+            user = await storage.updateUserResumeAnalysis(userId, fallbackAnalysis);
+            console.log('User resume analysis updated with fallback data');
+          } catch (updateError) {
+            console.error('Error updating user with fallback data:', updateError);
+            throw new Error(`Failed to update user with fallback data: ${updateError instanceof Error ? updateError.message : 'Unknown error'}`);
+          }
         }
       } else {
         console.log('User missing target role or skills for analysis');
@@ -109,8 +128,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Complete the survey
       console.log('Completing user survey');
-      user = await storage.completeUserSurvey(userId);
-      console.log('Survey completion successful. Final user state:', JSON.stringify(user, null, 2));
+      try {
+        user = await storage.completeUserSurvey(userId);
+        console.log('Survey completion successful. Final user state:', JSON.stringify(user, null, 2));
+      } catch (completeError) {
+        console.error('Error completing user survey:', completeError);
+        throw new Error(`Failed to complete user survey: ${completeError instanceof Error ? completeError.message : 'Unknown error'}`);
+      }
       
       res.status(200).json(user);
       console.log('==== API HANDLER END: /api/survey/complete ====');
@@ -119,10 +143,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       // Create a more detailed error response
       const errorDetails = {
-        error: error instanceof Error ? error.message : 'Failed to complete survey',
-        details: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString(),
-        path: '/api/survey/complete'
+        error: {
+          code: "500",
+          message: error instanceof Error ? error.message : 'A server error has occurred',
+          stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined,
+          timestamp: new Date().toISOString(),
+        }
       };
       
       console.error('Error details:', JSON.stringify(errorDetails, null, 2));

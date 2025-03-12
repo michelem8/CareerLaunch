@@ -10,15 +10,16 @@ config({ path: envPath });
 const apiKey = process.env.OPENAI_API_KEY;
 console.log('OpenAI API Key:', apiKey ? `${apiKey.substring(0, 7)}...` : 'Not found');
 
+// Warn about missing API key but don't throw an error
 if (!apiKey) {
-  throw new Error("OpenAI API key is not configured");
+  console.warn("OpenAI API key is not configured. Using mock implementations where possible.");
 }
 
-if (!apiKey.startsWith('sk-')) {
+if (apiKey && !apiKey.startsWith('sk-')) {
   console.warn('Warning: OpenAI API key does not start with "sk-". This may cause authentication issues.');
 }
 
-export const openai = new OpenAI({
+export const openai = apiKey ? new OpenAI({
   apiKey,
   dangerouslyAllowBrowser: process.env.NODE_ENV === 'test' // Only allow in test environment
-}); 
+}) : null; 

@@ -1,10 +1,20 @@
 import { openai } from "./openai-client";
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+// Remove specific import and use a more generic interface
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 
 export async function analyzeResume(resumeText: string) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OpenAI API key is not configured");
+    if (!process.env.OPENAI_API_KEY || !openai) {
+      console.warn("OpenAI API key is not configured or client is not initialized");
+      return {
+        skills: [],
+        experience: [],
+        education: [],
+        suggestedRoles: ["Software Engineer", "Web Developer", "Data Analyst"]
+      };
     }
 
     const response = await openai.chat.completions.create({
@@ -76,8 +86,8 @@ export async function getSkillGapAnalysis(
 ) {
   try {
     // Check if OpenAI API key is available
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn("OpenAI API key not found, using mock implementation for skill gap analysis");
+    if (!process.env.OPENAI_API_KEY || !openai) {
+      console.warn("OpenAI API key not found or client not initialized, using mock implementation for skill gap analysis");
       return getMockSkillGapAnalysis(currentSkills, targetRole, user);
     }
 
@@ -90,7 +100,7 @@ export async function getSkillGapAnalysis(
       throw new Error("Target role is required for skill gap analysis");
     }
 
-    const messages: ChatCompletionMessageParam[] = [
+    const messages: ChatMessage[] = [
       {
         role: "system",
         content: `You are a career transition expert specializing in technical roles. Analyze the gap between current skills and target role requirements, with special focus on career changes between different domains.
