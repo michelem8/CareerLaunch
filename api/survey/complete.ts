@@ -42,7 +42,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('Simplified path: User data retrieved:', user ? 'Success' : 'Not found');
       } catch (userError) {
         console.error('Simplified path: Error fetching user:', userError);
-        // Create a default user response instead of throwing an error
+        
+        // In production, we want to show a real error rather than mock data
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('Unable to retrieve user data. Please try again later.');
+        }
+        
+        // Create a default user response instead of throwing an error (development only)
         user = {
           id: 1,
           username: "demo_user",
@@ -70,11 +76,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ]
           }
         };
-        console.log('Simplified path: Created fallback user response');
+        console.log('Simplified path: Created fallback user response (development only)');
       }
       
       if (!user) {
-        console.log('Simplified path: Creating default user response');
+        // In production, we want to show a real error rather than mock data
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('User not found. Please try again later.');
+        }
+        
+        console.log('Simplified path: Creating default user response (development only)');
         // Create a default user response rather than trying to create in storage
         user = {
           id: 1,
@@ -105,45 +116,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
       } else {
         // If user exists, just update them with default values rather than calling OpenAI
-        console.log('Simplified path: Updating existing user with fallback values');
+        console.log('Simplified path: Updating existing user');
         try {
-          // Use fallback data
-          const fallbackMissingSkills = [
-            "Technical Leadership", 
-            "Team Management",
-            "Strategic Planning",
-            "Stakeholder Communication"
-          ];
-          
-          const fallbackRecommendations = [
-            "Take a leadership course focused on technical teams",
-            "Practice delegating technical tasks while maintaining oversight",
-            "Develop stronger architecture and system design knowledge",
-            "Work on communication skills for technical and non-technical audiences"
-          ];
-          
-          // Create fallback analysis
-          const fallbackAnalysis = {
-            skills: user.skills || ["JavaScript", "React", "Node.js"],
-            experience: user.resumeAnalysis?.experience || [],
-            education: user.resumeAnalysis?.education || [],
-            suggestedRoles: user.resumeAnalysis?.suggestedRoles || ["Engineering Manager", "Technical Lead", "Director of Engineering"],
-            missingSkills: fallbackMissingSkills,
-            recommendations: fallbackRecommendations
-          };
-          
-          // Complete the survey directly
-          try {
-            user = await storage.updateUserResumeAnalysis(userId, fallbackAnalysis);
+          // If we're in development and testing without OpenAI, use fallback data
+          if (process.env.NODE_ENV !== 'production' || process.env.OPENAI_API_KEY) {
+            // Use fallback data in development or if we have an API key in production
+            const fallbackMissingSkills = [
+              "Technical Leadership", 
+              "Team Management",
+              "Strategic Planning",
+              "Stakeholder Communication"
+            ];
+            
+            const fallbackRecommendations = [
+              "Take a leadership course focused on technical teams",
+              "Practice delegating technical tasks while maintaining oversight",
+              "Develop stronger architecture and system design knowledge",
+              "Work on communication skills for technical and non-technical audiences"
+            ];
+            
+            // Create fallback analysis
+            const fallbackAnalysis = {
+              skills: user.skills || ["JavaScript", "React", "Node.js"],
+              experience: user.resumeAnalysis?.experience || [],
+              education: user.resumeAnalysis?.education || [],
+              suggestedRoles: user.resumeAnalysis?.suggestedRoles || ["Engineering Manager", "Technical Lead", "Director of Engineering"],
+              missingSkills: fallbackMissingSkills,
+              recommendations: fallbackRecommendations
+            };
+            
+            // Complete the survey directly
+            try {
+              // Only update in development or if we have OpenAI configured
+              if (process.env.NODE_ENV !== 'production' || process.env.OPENAI_API_KEY) {
+                user = await storage.updateUserResumeAnalysis(userId, fallbackAnalysis);
+              }
+              
+              // Always mark as completed
+              user = await storage.completeUserSurvey(userId);
+              console.log('Simplified path: Survey marked as completed');
+            } catch (completeError) {
+              console.error('Simplified path: Error completing survey:', completeError);
+              
+              // In production with no OpenAI key, just mark as completed without mock data
+              if (process.env.NODE_ENV === 'production' && !process.env.OPENAI_API_KEY) {
+                // Just mark as completed without mock data
+                user.hasCompletedSurvey = true;
+                user.surveyStep = 3;
+              } else {
+                // In development or with OpenAI key, use mock data
+                user.resumeAnalysis = fallbackAnalysis;
+                user.hasCompletedSurvey = true;
+                user.surveyStep = 3;
+              }
+              
+              console.log('Simplified path: Manually updated user object without storage');
+            }
+          } else {
+            // In production without OpenAI API key, just mark as completed without mock data
             user = await storage.completeUserSurvey(userId);
-            console.log('Simplified path: Survey marked as completed');
-          } catch (completeError) {
-            console.error('Simplified path: Error completing survey:', completeError);
-            // Modify the user object directly instead of failing
-            user.resumeAnalysis = fallbackAnalysis;
-            user.hasCompletedSurvey = true;
-            user.surveyStep = 3;
-            console.log('Simplified path: Manually updated user object without storage');
+            console.log('Simplified path: Survey marked as completed (production, no analysis)');
           }
         } catch (error) {
           console.error('Simplified path: Error in analysis update:', error);

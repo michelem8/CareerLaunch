@@ -73,18 +73,73 @@ export const RoleCard: React.FC<{ title: string; subtitle?: string; skills: stri
 };
 
 export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
+  // Add fallback data if resumeAnalysis is missing, but only in development
+  const isProduction = import.meta.env.MODE === 'production';
+  
+  if (!user.resumeAnalysis && !isProduction) {
+    console.warn('CareerDashboard - resumeAnalysis is missing, creating fallback data (development only)');
+    user.resumeAnalysis = {
+      skills: user.skills || [],
+      missingSkills: [
+        "Technical Leadership",
+        "Team Management",
+        "Strategic Planning",
+        "Stakeholder Communication"
+      ],
+      recommendations: [
+        "Take a leadership course focused on technical teams",
+        "Practice delegating technical tasks while maintaining oversight",
+        "Develop stronger architecture and system design knowledge",
+        "Work on communication skills for technical and non-technical audiences"
+      ],
+      suggestedRoles: ["Engineering Manager", "Technical Lead", "Product Manager"]
+    };
+  }
+
+  // In development: ensure all required arrays exist in resumeAnalysis
+  if (user.resumeAnalysis && !isProduction) {
+    if (!Array.isArray(user.resumeAnalysis.missingSkills)) {
+      console.warn('CareerDashboard - missingSkills is not an array, creating fallback (development only)');
+      user.resumeAnalysis.missingSkills = [
+        "Technical Leadership",
+        "Team Management", 
+        "Strategic Planning",
+        "Stakeholder Communication"
+      ];
+    }
+    
+    if (!Array.isArray(user.resumeAnalysis.recommendations)) {
+      console.warn('CareerDashboard - recommendations is not an array, creating fallback (development only)');
+      user.resumeAnalysis.recommendations = [
+        "Take a leadership course focused on technical teams",
+        "Practice delegating technical tasks while maintaining oversight",
+        "Develop stronger architecture and system design knowledge",
+        "Work on communication skills for technical and non-technical audiences"
+      ];
+    }
+    
+    if (!Array.isArray(user.resumeAnalysis.suggestedRoles)) {
+      console.warn('CareerDashboard - suggestedRoles is not an array, creating fallback (development only)');
+      user.resumeAnalysis.suggestedRoles = ["Engineering Manager", "Technical Lead", "Product Manager"];
+    }
+  }
+
   const currentSkills = user.skills || [];
+  // In production, use potentially empty arrays to show proper empty states
   const suggestedRoles = user.resumeAnalysis?.suggestedRoles || [];
   const missingSkills = user.resumeAnalysis?.missingSkills || [];
   const recommendations = user.resumeAnalysis?.recommendations || [];
   
-  console.log('CareerDashboard - user data:', user);
+  // Add more detailed logging
+  console.log('CareerDashboard - user data:', JSON.stringify(user, null, 2));
+  console.log('CareerDashboard - current skills:', currentSkills);
   console.log('CareerDashboard - recommendations:', recommendations);
   console.log('CareerDashboard - missingSkills:', missingSkills);
+  console.log('CareerDashboard - suggestedRoles:', suggestedRoles);
   console.log('CareerDashboard - resumeAnalysis exists:', !!user.resumeAnalysis);
+  console.log('CareerDashboard - resumeAnalysis fields:', user.resumeAnalysis ? Object.keys(user.resumeAnalysis) : 'N/A');
   console.log('CareerDashboard - Environment:', import.meta.env.MODE);
   console.log('CareerDashboard - API URL:', import.meta.env.VITE_API_URL);
-  console.log('CareerDashboard - Suggested Roles:', suggestedRoles);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -116,11 +171,13 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
       <div className="mt-8">
         <h2 className="text-2xl font-semibold mb-4">Recommendations</h2>
         <div className="bg-white rounded-lg p-6 shadow-sm min-h-[300px] max-h-[800px] overflow-y-auto">
-          {user.resumeAnalysis?.recommendations && user.resumeAnalysis.recommendations.length > 0 ? (
+          {recommendations.length > 0 ? (
             <RecommendationsList recommendations={recommendations} />
           ) : (
             <div className="text-gray-500 italic">
-              No recommendations available. Please complete your profile to get personalized recommendations.
+              {isProduction ? 
+                "No recommendations available. To get personalized recommendations, please ensure you have completed the survey with your current skills and target role." : 
+                "No recommendations available. Please complete your profile to get personalized recommendations."}
             </div>
           )}
         </div>
@@ -132,11 +189,37 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
             <CourseRecommendations missingSkills={missingSkills} />
           ) : (
             <div className="text-gray-500 italic">
-              No courses available. Please complete your profile to get personalized course recommendations.
+              {isProduction ?
+                "No skill gaps identified. To get course recommendations, please ensure you have completed the survey with your current skills and target role." :
+                "No courses available. Please complete your profile to get personalized course recommendations."}
             </div>
           )}
         </div>
       </div>
+      
+      {isProduction && (!user.resumeAnalysis || 
+                       !recommendations.length || 
+                       !missingSkills.length) && (
+        <div className="mt-8 bg-blue-50 border border-blue-200 text-blue-700 px-6 py-4 rounded-lg">
+          <h3 className="text-xl font-semibold mb-2">Complete Setup to See Recommendations</h3>
+          <p className="mb-4">
+            To get personalized career recommendations and skill gap analysis, make sure to:
+          </p>
+          <ol className="list-decimal pl-5 space-y-2">
+            <li>Finish the onboarding survey with your current and target roles</li>
+            <li>Add your skills in your profile</li>
+            <li>Upload your resume for more accurate analysis (optional)</li>
+          </ol>
+          <div className="mt-4">
+            <a 
+              href="/survey"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Complete Your Profile
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
