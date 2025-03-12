@@ -15,11 +15,13 @@ import { getApiUrl } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Add test function to diagnose API connectivity
+// Test API connectivity
 const testApiEndpoint = async () => {
   try {
     console.log("Testing API connectivity...");
-    const testUrl = getApiUrl('/api/test');
+    // In production, use a relative URL to avoid CORS issues between www and non-www domains
+    const isProduction = import.meta.env.MODE === 'production';
+    const testUrl = isProduction ? '/api/test' : getApiUrl('/api/test');
     console.log("Using API URL:", testUrl);
     
     const response = await fetch(testUrl, {
@@ -27,7 +29,9 @@ const testApiEndpoint = async () => {
       headers: {
         'Accept': 'application/json'
       },
-      credentials: 'include'
+      credentials: 'include',
+      // Explicitly set mode to cors
+      mode: 'cors'
     });
     
     console.log("Test response status:", response.status);
@@ -41,7 +45,18 @@ const testApiEndpoint = async () => {
     }
   } catch (error) {
     console.error("Error testing API endpoint:", error);
-    return { success: false, error: error.message };
+    // Check if this is a CORS error
+    const isCorsError = error.message?.includes('CORS');
+    if (isCorsError) {
+      console.error("This appears to be a CORS issue. Check server configuration.");
+      // Try with a relative URL as fallback if we're in production
+      if (import.meta.env.MODE === 'production' && !window.location.href.includes('/cors-debug')) {
+        console.log("Redirecting to CORS debug page...");
+        window.location.href = '/cors-debug';
+        return { success: false, error: error.message, redirected: true };
+      }
+    }
+    return { success: false, error: error.message, isCorsError };
   }
 };
 

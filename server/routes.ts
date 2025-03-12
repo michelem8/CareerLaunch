@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { analyzeResume, getSkillGapAnalysis } from "./openai";
@@ -11,6 +11,23 @@ import { openai } from "./openai-client";
 export async function registerRoutes(app: Express) {
   // Register skills routes with /api prefix
   app.use('/api/skills', skillsRoutes);
+
+  // Add a dedicated CORS test endpoint
+  app.get("/api/cors-test", (req: Request, res: Response) => {
+    // Set explicit CORS headers
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    res.json({
+      message: 'CORS test successful',
+      timestamp: new Date().toISOString(),
+      headers: {
+        origin: req.headers.origin || 'none',
+        host: req.headers.host,
+        referer: req.headers.referer
+      }
+    });
+  });
 
   app.post("/api/users", async (req, res) => {
     try {

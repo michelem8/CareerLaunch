@@ -13,9 +13,10 @@ export const getApiBaseUrl = (): string => {
   // Check if we're in production on the main domain
   const isProduction = import.meta.env.MODE === 'production';
   
-  // In production environment, use the current origin to avoid CORS issues
+  // In production environment, use relative URLs to avoid CORS issues
   if (isProduction) {
-    return typeof window !== 'undefined' ? window.location.origin : '';
+    // Using relative URLs in production avoids CORS issues between www and non-www domains
+    return '';
   }
 
   // Development fallback

@@ -1,160 +1,143 @@
-import { useState } from 'react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { testCorsConnectivity } from '@/lib/cors-test';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { getApiUrl } from '@/lib/api';
-import { useQuery } from '@tanstack/react-query';
 
-export function CorsTestComponent() {
+interface TestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  details?: any;
+}
+
+export function CorsTest() {
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [manualTestUrl, setManualTestUrl] = useState('');
-  const [manualTestResult, setManualTestResult] = useState<any>(null);
-  
-  // Use React Query for automatic testing
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['corsTest'],
-    queryFn: testCorsConnectivity,
-    enabled: false, // Don't run automatically
-  });
-  
-  // Manual test function
-  const runManualTest = async () => {
+
+  const runTest = async (endpoint = '/api/test') => {
+    setIsLoading(true);
     try {
-      const url = manualTestUrl || getApiUrl('/api/test');
-      setManualTestUrl(url);
+      // Test with relative URL
+      const url = manualTestUrl || getApiUrl(endpoint);
+      console.log(`Testing CORS with URL: ${url}`);
       
-      console.log(`Running manual CORS test to: ${url}`);
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json'
         },
-        credentials: 'include'
+        credentials: 'include',
+        mode: 'cors'
       });
       
       if (response.ok) {
         const data = await response.json();
-        setManualTestResult({
-          success: true,
-          status: response.status,
-          data
-        });
+        setTestResults(prev => [
+          { 
+            success: true, 
+            message: `Success: ${url}`, 
+            details: data 
+          },
+          ...prev
+        ]);
       } else {
-        setManualTestResult({
-          success: false,
-          status: response.status,
-          statusText: response.statusText
-        });
+        setTestResults(prev => [
+          { 
+            success: false, 
+            message: `Failed with status: ${response.status}`, 
+            error: `${response.status} ${response.statusText}`,
+            details: { url }
+          },
+          ...prev
+        ]);
       }
     } catch (error) {
-      setManualTestResult({
-        success: false,
-        error: error.message,
-        isCorsError: error.message?.includes('CORS')
-      });
+      setTestResults(prev => [
+        { 
+          success: false, 
+          message: 'CORS Error', 
+          error: error.message,
+          details: { 
+            isCorsError: error.message?.includes('CORS'),
+            url: manualTestUrl || getApiUrl(endpoint)
+          }
+        },
+        ...prev
+      ]);
+    } finally {
+      setIsLoading(false);
     }
   };
-  
+
+  // Run test on component mount
+  useEffect(() => {
+    runTest();
+    // Also test the dedicated CORS test endpoint
+    runTest('/api/cors-test');
+  }, []);
+
   return (
-    <Card className="w-full max-w-3xl mx-auto my-8">
+    <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle>CORS Connectivity Test</CardTitle>
+        <CardTitle>CORS Test Utility</CardTitle>
         <CardDescription>
-          Test the CORS configuration between frontend and API
+          Test cross-origin resource sharing between frontend and backend
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium">Automatic Test</h3>
-          <Button 
-            onClick={() => refetch()} 
-            disabled={isLoading}
-            variant="default"
-          >
-            {isLoading ? 'Testing...' : 'Run Automatic Test'}
-          </Button>
-          
-          {data && (
-            <div className="mt-4">
-              <Alert variant={data.success ? "default" : "destructive"}>
-                <AlertTitle>
-                  {data.success ? 'CORS Test Passed' : 'CORS Test Failed'}
-                </AlertTitle>
-                <AlertDescription>
-                  <div className="mt-2">
-                    <p><strong>Origin:</strong> {data.details.origin}</p>
-                    <p><strong>Timestamp:</strong> {data.details.timestamp}</p>
-                    
-                    {data.relativeTest && (
-                      <div className="mt-2 p-2 bg-muted rounded-md">
-                        <p><strong>Relative URL Test:</strong> {data.relativeTest.success ? 'Success' : 'Failed'}</p>
-                        <p><strong>URL:</strong> {data.relativeTest.url}</p>
-                        {data.relativeTest.error && <p><strong>Error:</strong> {data.relativeTest.error}</p>}
-                      </div>
-                    )}
-                    
-                    {data.absoluteTest && (
-                      <div className="mt-2 p-2 bg-muted rounded-md">
-                        <p><strong>Absolute URL Test:</strong> {data.absoluteTest.success ? 'Success' : 'Failed'}</p>
-                        <p><strong>URL:</strong> {data.absoluteTest.url}</p>
-                        {data.absoluteTest.error && <p><strong>Error:</strong> {data.absoluteTest.error}</p>}
-                      </div>
-                    )}
-                  </div>
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-          
-          {isError && (
-            <Alert variant="destructive">
-              <AlertTitle>Test Failed</AlertTitle>
-              <AlertDescription>
-                {error instanceof Error ? error.message : 'Unknown error occurred'}
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-        
-        <div className="border-t pt-4 space-y-2">
-          <h3 className="text-lg font-medium">Manual Test</h3>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              className="flex-1 px-3 py-2 border rounded-md"
-              placeholder="API URL to test"
-              value={manualTestUrl}
-              onChange={(e) => setManualTestUrl(e.target.value)}
-            />
-            <Button onClick={runManualTest}>
-              Test
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={() => runTest()} 
+              disabled={isLoading}
+              variant="outline"
+            >
+              Test API Endpoint
+            </Button>
+            <Button 
+              onClick={() => runTest('/api/cors-test')} 
+              disabled={isLoading}
+              variant="outline"
+            >
+              Test CORS Endpoint
             </Button>
           </div>
-          
-          {manualTestResult && (
-            <div className="mt-4">
-              <Alert variant={manualTestResult.success ? "default" : "destructive"}>
-                <AlertTitle>
-                  {manualTestResult.success ? 'Test Passed' : 'Test Failed'}
-                </AlertTitle>
+
+          <div className="space-y-4 mt-4">
+            {testResults.map((result, index) => (
+              <Alert key={index} variant={result.success ? "default" : "destructive"}>
+                <div className="flex items-center gap-2">
+                  <AlertTitle>{result.success ? 'Success' : 'Error'}</AlertTitle>
+                  <Badge variant={result.success ? "outline" : "destructive"}>
+                    {result.success ? 'CORS OK' : 'CORS Failed'}
+                  </Badge>
+                </div>
                 <AlertDescription>
                   <div className="mt-2">
-                    {manualTestResult.status && <p><strong>Status:</strong> {manualTestResult.status}</p>}
-                    {manualTestResult.error && <p><strong>Error:</strong> {manualTestResult.error}</p>}
-                    {manualTestResult.isCorsError && <p><strong>CORS Error Detected</strong></p>}
-                    
-                    {manualTestResult.data && (
-                      <div className="mt-2 p-2 bg-muted rounded-md overflow-auto max-h-40">
-                        <pre className="text-xs">{JSON.stringify(manualTestResult.data, null, 2)}</pre>
-                      </div>
+                    <p>{result.message}</p>
+                    {result.error && <p className="text-red-500">{result.error}</p>}
+                    {result.details && (
+                      <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">
+                        {JSON.stringify(result.details, null, 2)}
+                      </pre>
                     )}
                   </div>
                 </AlertDescription>
               </Alert>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       </CardContent>
+      <CardFooter className="flex justify-between">
+        <p className="text-sm text-gray-500">
+          {testResults.length > 0 
+            ? `${testResults.filter(r => r.success).length} of ${testResults.length} tests passed`
+            : 'No tests run yet'}
+        </p>
+      </CardFooter>
     </Card>
   );
 } 

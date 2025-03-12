@@ -32,17 +32,22 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [
       'https://careerpathfinder.io',
       'https://www.careerpathfinder.io',
-      'https://api.careerpathfinder.io'
+      'https://api.careerpathfinder.io',
+      // Add any additional domains or subdomains here
     ] 
   : ['http://localhost:5173']; // Vite's default development port
 
 app.use(cors({
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
     // Allow requests with no origin (like mobile apps, curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('Request with no origin allowed');
+      return callback(null, true);
+    }
     
     // Check if the origin is in our allowed list
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      console.log(`Origin allowed by CORS policy: ${origin}`);
       return callback(null, true);
     }
     
@@ -56,15 +61,32 @@ app.use(cors({
 }));
 
 // Add a debug endpoint to check CORS headers
-app.options('/api/test', (req, res) => {
+app.options('/api/test', (req: Request, res: Response) => {
+  // Log the request headers for debugging
+  console.log('OPTIONS request headers:', req.headers);
+  
+  // Set explicit CORS headers for the OPTIONS request
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   res.status(200).end();
 });
 
-app.get('/api/test', (req, res) => {
+app.get('/api/test', (req: Request, res: Response) => {
+  // Log the request headers for debugging
+  console.log('GET /api/test request headers:', req.headers);
+  
+  // Set explicit CORS headers for the GET request
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
   res.json({ 
     message: 'API is working correctly',
     cors: 'enabled',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin || 'unknown'
   });
 });
 
