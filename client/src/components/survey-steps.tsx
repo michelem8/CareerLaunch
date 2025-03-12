@@ -126,6 +126,10 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
     mutationFn: async (data: { currentRole: string; targetRole: string }) => {
       console.log("Saving roles:", data);
       try {
+        // Log additional debugging info
+        console.log("Environment:", import.meta.env.MODE);
+        console.log("Current URL:", window.location.href);
+        
         const response = await apiRequest("POST", "/api/survey/roles", data);
         console.log("Response status:", response.status);
         console.log("Response headers:", Object.fromEntries([...response.headers]));
@@ -144,7 +148,12 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
           responseData = JSON.parse(text);
         } catch (e) {
           console.error("Failed to parse response as JSON:", e);
-          throw new Error("Server returned invalid JSON: " + text.substring(0, 100) + "...");
+          // Provide more specific error message for debugging
+          if (text.includes("<!DOCTYPE html>")) {
+            throw new Error("Server returned HTML instead of JSON (likely a routing issue)");
+          } else {
+            throw new Error("Server returned invalid JSON: " + text.substring(0, 100) + "...");
+          }
         }
         
         if (!response.ok) {
@@ -154,6 +163,28 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
         return responseData;
       } catch (error) {
         console.error("Error in saveRoles mutation:", error);
+        // Better error handling for network/CORS issues
+        if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
+          console.error("This may be a CORS or network issue");
+          
+          // Try a direct fetch as a fallback for CORS issues
+          try {
+            console.log("Trying direct fetch fallback...");
+            const fallbackResponse = await fetch("/api/survey/roles", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+              credentials: "include"
+            });
+            
+            if (fallbackResponse.ok) {
+              return await fallbackResponse.json();
+            }
+          } catch (fallbackError) {
+            console.error("Fallback fetch also failed:", fallbackError);
+          }
+        }
+        
         throw error;
       }
     },

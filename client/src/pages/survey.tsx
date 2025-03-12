@@ -35,8 +35,21 @@ const testCors = async () => {
     
     const results: TestResults = {};
     
+    // In production, always use relative paths for API endpoints
+    const isProduction = import.meta.env.MODE === 'production';
+    const hostname = window.location.hostname;
+    const isProductionDomain = hostname.includes('careerpathfinder.io');
+    
+    const getApiUrl = (endpoint: string) => {
+      if (isProduction && isProductionDomain) {
+        // Use relative URLs in production
+        return endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+      }
+      return `${import.meta.env.VITE_API_URL || ''}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    };
+    
     // Test 1: Test the CORS test endpoint
-    const testUrl = `${import.meta.env.VITE_API_URL || ''}/api/cors-test`;
+    const testUrl = getApiUrl('/api/cors-test');
     console.log('Testing CORS test endpoint:', testUrl);
     
     try {
@@ -70,7 +83,7 @@ const testCors = async () => {
     }
     
     // Test 2: Get request headers
-    const headersUrl = `${import.meta.env.VITE_API_URL || ''}/api/debug/headers`;
+    const headersUrl = getApiUrl('/api/debug/headers');
     console.log('Testing headers endpoint:', headersUrl);
     
     try {
@@ -104,7 +117,7 @@ const testCors = async () => {
     }
     
     // Test 3: Try to get user data with preflight handling
-    const userUrl = `${import.meta.env.VITE_API_URL || ''}/api/users/me`;
+    const userUrl = getApiUrl('/api/users/me');
     console.log('Testing user endpoint:', userUrl);
     
     try {
@@ -193,9 +206,16 @@ export default function Survey() {
     queryKey: ["/api/users/me"],
     queryFn: async () => {
       try {
-        // Use the API URL from environment
-        const apiUrl = import.meta.env.VITE_API_URL || '';
-        const url = `${apiUrl}/api/users/me`;
+        // In production, always use relative paths for API endpoints
+        const isProduction = import.meta.env.MODE === 'production';
+        const hostname = window.location.hostname;
+        const isProductionDomain = hostname.includes('careerpathfinder.io');
+        
+        // Determine the appropriate URL
+        const url = isProduction && isProductionDomain
+          ? '/api/users/me'  // Use relative URL in production
+          : `${import.meta.env.VITE_API_URL || ''}/api/users/me`;
+          
         console.log('Fetching user from:', url);
         
         // First attempt with redirect: error
@@ -293,8 +313,15 @@ export default function Survey() {
           onClick={async () => {
             // Test the connection to the CORS endpoint
             try {
-              const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
-              const corsTestUrl = `${apiUrl}/api/cors-test`;
+              // Always use relative URL in production
+              const isProduction = import.meta.env.MODE === 'production';
+              const hostname = window.location.hostname;
+              const isProductionDomain = hostname.includes('careerpathfinder.io');
+              
+              const corsTestUrl = isProduction && isProductionDomain
+                ? '/api/cors-test'  // Use relative URL in production
+                : `${import.meta.env.VITE_API_URL || ''}/api/cors-test`;
+                
               const response = await fetch(corsTestUrl, { 
                 mode: 'cors', 
                 credentials: 'include',

@@ -5,12 +5,12 @@ import { QueryClient, type QueryFunction } from "@tanstack/react-query";
 const API_BASE_URL = import.meta.env.VITE_API_URL || getDefaultApiUrl();
 
 function getDefaultApiUrl() {
-  // Handle production environment where VITE_API_URL might not be set correctly
+  // In production, always use relative paths to avoid CORS issues between www and non-www
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     if (hostname.includes('careerpathfinder.io')) {
-      // For production, use the same origin to avoid CORS issues
-      return window.location.origin;
+      // For production, use relative URLs to avoid CORS issues between www and non-www subdomains
+      return '';
     }
   }
   return ''; // Default to empty string for development
@@ -337,11 +337,12 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
 
 // Helper function to get the best API URL for the given path
 function getBestApiUrlForPath(path: string) {
-  // In production, prefer using same-origin requests to avoid CORS issues
+  // In production, always use relative paths to avoid CORS issues
   if (import.meta.env.MODE === 'production' && 
       typeof window !== 'undefined' && 
       window.location.hostname.includes('careerpathfinder.io')) {
-    return `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
+    // Use relative paths in production to avoid www vs non-www CORS issues
+    return path.startsWith('/') ? path : `/${path}`;
   }
   
   // Otherwise use the configured API_BASE_URL
