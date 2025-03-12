@@ -2,7 +2,19 @@
 import { QueryClient, type QueryFunction } from "@tanstack/react-query";
 
 // Define the API base URL - ensure it includes the www subdomain in production
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || getDefaultApiUrl();
+
+function getDefaultApiUrl() {
+  // Handle production environment where VITE_API_URL might not be set correctly
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname.includes('careerpathfinder.io')) {
+      // For production, use the same origin to avoid CORS issues
+      return window.location.origin;
+    }
+  }
+  return ''; // Default to empty string for development
+}
 
 // Log for debugging
 console.log('API Base URL:', API_BASE_URL);
@@ -250,9 +262,7 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
   // Always use the full API URL with the www subdomain when available
   const fullUrl = path.startsWith('http') 
     ? path  // If path is already a full URL, use it as is
-    : path.startsWith('/') 
-      ? `${API_BASE_URL}${path}`  // If path starts with /, append to base URL
-      : `${API_BASE_URL}/${path}`; // Otherwise, ensure / between base URL and path
+    : getBestApiUrlForPath(path);
   
   console.log(`Making ${method} request to:`, fullUrl);
   
@@ -278,6 +288,32 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
       console.error('Current origin:', window.location.origin);
       console.error('Target URL:', fullUrl);
       
+      // Try a fallback approach for production environment
+      if (import.meta.env.MODE === 'production' && 
+          typeof window !== 'undefined' && 
+          window.location.hostname.includes('careerpathfinder.io')) {
+        // Try the same-origin approach in production
+        try {
+          const sameOriginUrl = `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
+          console.log('Trying same-origin fallback URL:', sameOriginUrl);
+          
+          const fallbackResponse = await fetch(sameOriginUrl, {
+            method,
+            headers: {
+              'Content-Type': method === 'GET' ? undefined : 'application/json',
+              'Accept': 'application/json'
+            },
+            body: body ? JSON.stringify(body) : undefined,
+            credentials: 'include',
+            mode: 'cors'
+          });
+          
+          return fallbackResponse;
+        } catch (fallbackError) {
+          console.error('Same-origin fallback also failed:', fallbackError);
+        }
+      }
+      
       // Only use mock data in development mode
       if (import.meta.env.MODE === 'development') {
         const mockData = getMockData(path, body);
@@ -298,6 +334,21 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
     throw error;
   }
 };
+
+// Helper function to get the best API URL for the given path
+function getBestApiUrlForPath(path: string) {
+  // In production, prefer using same-origin requests to avoid CORS issues
+  if (import.meta.env.MODE === 'production' && 
+      typeof window !== 'undefined' && 
+      window.location.hostname.includes('careerpathfinder.io')) {
+    return `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
+  }
+  
+  // Otherwise use the configured API_BASE_URL
+  return path.startsWith('/') 
+    ? `${API_BASE_URL}${path}`  // If path starts with /, append to base URL
+    : `${API_BASE_URL}/${path}`; // Otherwise, ensure / between base URL and path
+}
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {

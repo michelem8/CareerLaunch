@@ -271,15 +271,46 @@ export default function Survey() {
     return <div className="min-h-screen bg-background flex items-center justify-center flex-col p-4">
       <h2 className="text-xl font-semibold mb-4">Connection Issue Detected</h2>
       <p className="text-muted-foreground mb-2">We're having trouble connecting to our servers.</p>
-      <pre className="bg-gray-100 p-3 rounded text-sm overflow-auto max-w-full">
-        {JSON.stringify({error: userError, corsStatus}, null, 2)}
-      </pre>
-      <button 
-        onClick={() => window.location.reload()} 
-        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-      >
-        Retry Connection
-      </button>
+      <div className="w-full max-w-lg">
+        <div className="text-sm mb-4">
+          <p className="font-medium mb-1">Technical Details:</p>
+          <p className="text-xs text-gray-600 mb-1">API URL: {import.meta.env.VITE_API_URL || 'Not defined'}</p>
+          <p className="text-xs text-gray-600 mb-1">Current Origin: {typeof window !== 'undefined' ? window.location.origin : 'N/A'}</p>
+          <p className="text-xs text-gray-600 mb-1">Environment: {import.meta.env.MODE}</p>
+        </div>
+        <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-w-full max-h-48">
+          {JSON.stringify({error: userError, corsStatus}, null, 2)}
+        </pre>
+      </div>
+      <div className="flex space-x-4 mt-4">
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
+        >
+          Retry Connection
+        </button>
+        <button 
+          onClick={async () => {
+            // Test the connection to the CORS endpoint
+            try {
+              const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+              const corsTestUrl = `${apiUrl}/api/cors-test`;
+              const response = await fetch(corsTestUrl, { 
+                mode: 'cors', 
+                credentials: 'include',
+                headers: { 'Accept': 'application/json' }
+              });
+              const result = await response.json();
+              alert(`CORS Test: ${JSON.stringify(result, null, 2)}`);
+            } catch (error) {
+              alert(`CORS Test Failed: ${error.message}`);
+            }
+          }} 
+          className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md transition-colors"
+        >
+          Test Connection
+        </button>
+      </div>
     </div>;
   }
 
