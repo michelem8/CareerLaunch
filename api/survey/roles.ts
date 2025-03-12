@@ -1,19 +1,13 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { rolesSchema } from '../../shared/schema';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// This is a simplified version of the roles API for troubleshooting
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log('==== API HANDLER START: /api/survey/roles (SIMPLIFIED) ====');
-  console.log('Request method:', req.method);
-  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
-  
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
   // Handle preflight requests
@@ -22,72 +16,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Handle the POST request for saving roles
-  if (req.method === 'POST') {
-    console.log('Processing POST request');
-    
-    try {
-      // Log request for debugging
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
-      
-      // Validate the roles data
-      console.log('Validating roles data');
-      const { currentRole, targetRole } = rolesSchema.parse(req.body);
-      console.log('Roles validated successfully:', { currentRole, targetRole });
-      
-      // Create a mock user response without using storage
-      const mockUser = {
-        id: 1,
-        username: "demo_user",
-        password: "********", // Masked for security
-        currentRole: currentRole,
-        targetRole: targetRole,
-        skills: [],
-        resumeAnalysis: {
-          skills: [],
-          experience: [],
-          education: [],
-          suggestedRoles: [],
-          missingSkills: [],
-          recommendations: []
-        },
-        preferences: null,
-        hasCompletedSurvey: false,
-        surveyStep: 2
-      };
-
-      console.log('Sending successful mock response');
-      res.status(200).json(mockUser);
-    } catch (error: unknown) {
-      console.error('Error in simplified roles endpoint:', error);
-      console.error('Full error details:', error instanceof Error ? error.stack : 'No stack trace');
-      
-      // Improved error handling with proper status codes
-      if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
-        // Validation error
-        console.error('Validation error details:', JSON.stringify((error as any).errors, null, 2));
-        return res.status(400).json({ 
-          error: { 
-            code: '400', 
-            message: 'Invalid input data',
-            details: (error as any).errors 
-          }
-        });
-      } else {
-        // Server error - provide a standard error format
-        return res.status(500).json({ 
-          error: { 
-            code: '500', 
-            message: 'A server error has occurred',
-            details: error instanceof Error ? error.message : 'Unknown error'
-          }
-        });
-      }
-    }
-  } else {
-    // Method not allowed
-    res.status(405).json({ error: { code: '405', message: 'Method not allowed' } });
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
-  
-  console.log('==== API HANDLER END: /api/survey/roles (SIMPLIFIED) ====');
+
+  try {
+    const { currentRole, targetRole } = req.body;
+
+    // Validate required fields
+    if (!currentRole || !targetRole) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: {
+          currentRole: !currentRole ? 'Current role is required' : undefined,
+          targetRole: !targetRole ? 'Target role is required' : undefined,
+        }
+      });
+    }
+
+    // Process the roles (add your business logic here)
+    // For now, we'll just echo back the data
+    return res.status(200).json({
+      success: true,
+      data: {
+        currentRole,
+        targetRole,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Error processing survey roles:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
 } 

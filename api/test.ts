@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Simple test endpoint to diagnose serverless environment issues
 export default function handler(req: VercelRequest, res: VercelResponse) {
@@ -18,11 +18,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
   // Handle preflight requests
@@ -54,10 +54,16 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
   console.log('Diagnostic data:', JSON.stringify(diagnosticData, null, 2));
   
-  // Return success with diagnostic information
+  // Return test response
   res.status(200).json({
     success: true,
-    message: 'Test endpoint is working',
-    diagnostics: diagnosticData
+    message: 'API is working',
+    timestamp: new Date().toISOString(),
+    environment: process.env.VERCEL_ENV || 'development',
+    requestInfo: {
+      method: req.method,
+      url: req.url,
+      headers: req.headers,
+    }
   });
 } 
