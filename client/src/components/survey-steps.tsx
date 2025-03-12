@@ -11,16 +11,21 @@ import { useToast } from "@/hooks/use-toast";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { useState } from "react";
 import { z } from "zod";
+import { getApiUrl } from "@/lib/api";
 
 // Add test function to diagnose API connectivity
 const testApiEndpoint = async () => {
   try {
     console.log("Testing API connectivity...");
-    const response = await fetch("/api/test", {
+    const testUrl = getApiUrl('/api/test');
+    console.log("Using API URL:", testUrl);
+    
+    const response = await fetch(testUrl, {
       method: "GET",
       headers: {
         'Accept': 'application/json'
-      }
+      },
+      credentials: 'include'
     });
     
     console.log("Test response status:", response.status);
