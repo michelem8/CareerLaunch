@@ -1,45 +1,40 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
-  // Log full request details
-  console.log('CORS test request:', {
-    headers: req.headers,
-    method: req.method,
-    url: req.url,
-    origin: req.headers.origin,
-  });
-
-  // Always set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || 'https://careerpathfinder.io');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-  );
-
-  // Handle preflight requests
+  // Set CORS headers for all requests
+  const origin = req.headers.origin || '*';
+  
+  // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    return res.status(204).end();
   }
-
-  // Return CORS test information
-  res.status(200).json({
+  
+  // Set CORS headers for the actual request
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // Return a response with CORS debugging information
+  return res.status(200).json({
     success: true,
-    message: 'CORS is working correctly',
-    request: {
-      origin: req.headers.origin,
-      host: req.headers.host,
-      referer: req.headers.referer,
-      userAgent: req.headers['user-agent'],
-    },
+    message: 'CORS test successful',
     cors: {
-      allowOrigin: res.getHeader('Access-Control-Allow-Origin'),
-      allowCredentials: res.getHeader('Access-Control-Allow-Credentials'),
-      allowMethods: res.getHeader('Access-Control-Allow-Methods'),
-      allowHeaders: res.getHeader('Access-Control-Allow-Headers'),
+      enabled: true,
+      origin: origin,
+      method: req.method,
     },
-    timestamp: new Date().toISOString()
+    headers: {
+      received: req.headers,
+      sent: {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Credentials': 'true',
+      }
+    },
+    timestamp: new Date().toISOString(),
+    environment: process.env.VERCEL_ENV || 'unknown',
   });
 } 
