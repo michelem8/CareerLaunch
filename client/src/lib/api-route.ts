@@ -39,4 +39,44 @@ export async function getCourseRecommendations(skills: string[]) {
     console.error('Error fetching course recommendations:', error);
     throw error;
   }
+}
+
+// Utility endpoints (now from consolidated API)
+export async function testCorsEndpoint() {
+  try {
+    const response = await apiRequest('GET', '/api/utils/cors-test');
+    if (!response.ok) {
+      throw new Error('CORS test failed');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('CORS test error:', error);
+    throw error;
+  }
+}
+
+export async function checkOpenAIStatus() {
+  try {
+    const response = await apiRequest('GET', '/api/utils/openai-status');
+    if (!response.ok) {
+      throw new Error('OpenAI status check failed');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('OpenAI status check error:', error);
+    throw error;
+  }
+}
+
+export async function healthCheck() {
+  try {
+    const response = await apiRequest('GET', '/api/utils/health');
+    if (!response.ok) {
+      throw new Error('Health check failed');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Health check error:', error);
+    throw error;
+  }
 } 
