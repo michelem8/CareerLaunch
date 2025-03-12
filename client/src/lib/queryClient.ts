@@ -258,8 +258,21 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Add this new function to get the best API URL for a path
+function getBestApiUrlForPath(path: string) {
+  // Handle production environment
+  if (import.meta.env.MODE === 'production') {
+    // Ensure path starts with / if it doesn't already
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return normalizedPath; // Use relative paths in production
+  }
+  
+  // Default behavior for development
+  return path.startsWith('/') ? `${API_BASE_URL}${path}` : `${API_BASE_URL}/${path}`;
+}
+
 export const apiRequest = async (method: string, path: string, body?: unknown) => {
-  // Always use the full API URL with the www subdomain when available
+  // Get the best URL for this environment and path
   const fullUrl = path.startsWith('http') 
     ? path  // If path is already a full URL, use it as is
     : getBestApiUrlForPath(path);
@@ -267,9 +280,20 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
   console.log(`Making ${method} request to:`, fullUrl);
   
   try {
-    const response = await corsFixFetch(fullUrl, {
+    // Add cache-busting parameter to avoid stale data in GET requests
+    const urlWithCacheBusting = method === 'GET' && !fullUrl.includes('?') 
+      ? `${fullUrl}?_t=${Date.now()}` 
+      : fullUrl;
+    
+    const response = await fetch(urlWithCacheBusting, {
       method,
+      headers: {
+        'Content-Type': method === 'GET' ? 'application/json' : 'application/json',
+        'Accept': 'application/json'
+      },
       body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+      mode: 'cors'
     });
 
     // Log response details for debugging
@@ -279,77 +303,28 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
   } catch (error) {
     console.error(`API request failed:`, error);
     
-    // Check if this is a CORS error or network error
-    if (error instanceof TypeError && 
-       (error.message.includes('Failed to fetch') || 
-        error.message.includes('Network request failed'))) {
-      
-      console.error('This may be a CORS or network issue. Check that the server allows requests from this origin.');
-      console.error('Current origin:', window.location.origin);
-      console.error('Target URL:', fullUrl);
-      
-      // Try a fallback approach for production environment
-      if (import.meta.env.MODE === 'production' && 
-          typeof window !== 'undefined' && 
-          window.location.hostname.includes('careerpathfinder.io')) {
-        // Try the same-origin approach in production
-        try {
-          const sameOriginUrl = `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
-          console.log('Trying same-origin fallback URL:', sameOriginUrl);
-          
-          const fallbackResponse = await fetch(sameOriginUrl, {
-            method,
-            headers: {
-              'Content-Type': method === 'GET' ? undefined : 'application/json',
-              'Accept': 'application/json'
-            },
-            body: body ? JSON.stringify(body) : undefined,
-            credentials: 'include',
-            mode: 'cors'
-          });
-          
-          return fallbackResponse;
-        } catch (fallbackError) {
-          console.error('Same-origin fallback also failed:', fallbackError);
-        }
+    // Log detailed error for debugging
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
+    // Only use mock data in development mode as a fallback
+    if (import.meta.env.MODE === 'development') {
+      const mockData = getMockData(path, body);
+      if (mockData) {
+        console.log('Using mock data fallback in development mode');
+        const mockResponse = new Response(JSON.stringify(mockData), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+        return mockResponse;
       }
-      
-      // Only use mock data in development mode
-      if (import.meta.env.MODE === 'development') {
-        const mockData = getMockData(path, body);
-        if (mockData) {
-          console.log('Using mock data fallback in development mode');
-          const mockResponse = new Response(JSON.stringify(mockData), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
-          return mockResponse;
-        }
-      }
-      
-      // In production, throw the error to be handled by the calling code
-      console.error('In production environment - not using mock data.');
     }
     
     throw error;
   }
 };
-
-// Helper function to get the best API URL for the given path
-function getBestApiUrlForPath(path: string) {
-  // In production, always use relative paths to avoid CORS issues
-  if (import.meta.env.MODE === 'production' && 
-      typeof window !== 'undefined' && 
-      window.location.hostname.includes('careerpathfinder.io')) {
-    // Use relative paths in production to avoid www vs non-www CORS issues
-    return path.startsWith('/') ? path : `/${path}`;
-  }
-  
-  // Otherwise use the configured API_BASE_URL
-  return path.startsWith('/') 
-    ? `${API_BASE_URL}${path}`  // If path starts with /, append to base URL
-    : `${API_BASE_URL}/${path}`; // Otherwise, ensure / between base URL and path
-}
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
