@@ -134,58 +134,57 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
         console.log("Response status:", response.status);
         console.log("Response headers:", Object.fromEntries([...response.headers]));
         
-        // Early check for empty response
-        const clonedResponse = response.clone();
-        const text = await clonedResponse.text();
-        console.log("Raw response text:", text);
+        // Handle non-200 status codes
+        if (!response.ok) {
+          // Try to parse error message from response
+          let errorText = await response.text();
+          let errorJson;
+          
+          try {
+            errorJson = JSON.parse(errorText);
+            throw new Error(errorJson.error || `Server error: ${response.status}`);
+          } catch (parseError) {
+            // If we can't parse the JSON, use the raw text or status code
+            throw new Error(errorText || `Server error: ${response.status}`);
+          }
+        }
         
-        if (!text || text.trim() === '') {
+        // Process successful response
+        let responseText = await response.text();
+        
+        // Handle empty response
+        if (!responseText || responseText.trim() === '') {
           throw new Error("Server returned empty response");
         }
         
         let responseData;
         try {
-          responseData = JSON.parse(text);
+          responseData = JSON.parse(responseText);
         } catch (e) {
           console.error("Failed to parse response as JSON:", e);
           // Provide more specific error message for debugging
-          if (text.includes("<!DOCTYPE html>")) {
+          if (responseText.includes("<!DOCTYPE html>")) {
             throw new Error("Server returned HTML instead of JSON (likely a routing issue)");
           } else {
-            throw new Error("Server returned invalid JSON: " + text.substring(0, 100) + "...");
+            throw new Error("Server returned invalid JSON: " + responseText.substring(0, 100) + "...");
           }
-        }
-        
-        if (!response.ok) {
-          throw new Error(responseData.error || "Failed to save roles");
         }
         
         return responseData;
       } catch (error) {
         console.error("Error in saveRoles mutation:", error);
-        // Better error handling for network/CORS issues
-        if (error instanceof TypeError && error.message.includes("Failed to fetch")) {
-          console.error("This may be a CORS or network issue");
-          
-          // Try a direct fetch as a fallback for CORS issues
-          try {
-            console.log("Trying direct fetch fallback...");
-            const fallbackResponse = await fetch("/api/survey/roles", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(data),
-              credentials: "include"
-            });
-            
-            if (fallbackResponse.ok) {
-              return await fallbackResponse.json();
-            }
-          } catch (fallbackError) {
-            console.error("Fallback fetch also failed:", fallbackError);
-          }
-        }
         
-        throw error;
+        // Improved error handling
+        if (error instanceof Error) {
+          // Pass the error message directly
+          throw error;
+        } else if (typeof error === 'object' && error !== null) {
+          // Format object errors properly
+          throw new Error(JSON.stringify(error));
+        } else {
+          // Handle other error types
+          throw new Error(`Unknown error: ${String(error)}`);
+        }
       }
     },
     onSuccess: (data) => {

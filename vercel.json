@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/survey/roles",
+      "destination": "/api/survey/roles"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

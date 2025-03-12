@@ -113,20 +113,48 @@ app.get('/api/users/me', (req, res) => {
 // Add direct handler for roles endpoint
 app.post('/api/survey/roles', (req, res) => {
   console.log('Direct handler for /api/survey/roles', req.body);
-  // Set CORS headers explicitly
-  res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   
-  // Update user roles logic would go here in a real app
-  const mockResponse = {
-    id: 1,
-    username: "demo_user",
-    currentRole: req.body?.currentRole || "Product Manager",
-    targetRole: req.body?.targetRole || "Engineering Manager",
-    surveyCompleted: false
-  };
-  
-  res.status(200).json(mockResponse);
+  try {
+    // Set CORS headers explicitly for all responses
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Check for required fields
+    if (!req.body || typeof req.body.currentRole !== 'string' || typeof req.body.targetRole !== 'string') {
+      return res.status(400).json({
+        error: 'Invalid request format',
+        details: 'Both currentRole and targetRole must be provided as strings'
+      });
+    }
+    
+    // Update user roles logic would go here in a real app
+    const mockResponse = {
+      id: 1,
+      username: "demo_user",
+      currentRole: req.body.currentRole,
+      targetRole: req.body.targetRole,
+      skills: [],
+      updatedAt: new Date().toISOString()
+    };
+    
+    return res.status(200).json(mockResponse);
+  } catch (error) {
+    console.error('Error in /api/survey/roles handler:', error);
+    
+    let errorMessage = 'Failed to process request';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'object' && error !== null) {
+      errorMessage = JSON.stringify(error);
+    }
+    
+    return res.status(500).json({
+      error: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Setup static file serving from dist/public

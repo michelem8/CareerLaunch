@@ -100,6 +100,20 @@ export async function registerRoutes(app: Express) {
   app.post("/api/survey/roles", async (req, res) => {
     try {
       console.log("Received roles data:", req.body);
+      
+      // Add validation for missing body
+      if (!req.body) {
+        return res.status(400).json({ error: "Missing request body" });
+      }
+      
+      // Validate required fields before schema validation
+      if (typeof req.body.currentRole !== 'string' || typeof req.body.targetRole !== 'string') {
+        return res.status(400).json({ 
+          error: "Invalid request format", 
+          details: "Both currentRole and targetRole must be strings" 
+        });
+      }
+      
       const { currentRole, targetRole } = rolesSchema.parse(req.body);
 
       const userId = 1; // In a real app, get from session
@@ -122,10 +136,21 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Roles update error:", error);
       
+      // Improve error handling and formatting
+      let errorMessage = "Failed to save roles";
+      let errorDetails = undefined;
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        errorDetails = error.stack;
+      } else if (typeof error === 'object' && error !== null) {
+        errorMessage = JSON.stringify(error);
+      }
+      
       // Make sure we're sending a complete, valid JSON response
-      return res.status(400).json({ 
-        error: error instanceof Error ? error.message : "Failed to save roles",
-        details: error instanceof Error ? error.stack : undefined
+      return res.status(500).json({ 
+        error: errorMessage,
+        details: errorDetails
       });
     }
   });
