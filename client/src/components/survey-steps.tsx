@@ -19,9 +19,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const testApiEndpoint = async () => {
   try {
     console.log("Testing API connectivity...");
-    // In production, use a relative URL to avoid CORS issues between www and non-www domains
-    const isProduction = import.meta.env.MODE === 'production';
-    const testUrl = isProduction ? '/api/test' : getApiUrl('/api/test');
+    // Use the getApiUrl function to get the correct URL for the current environment
+    const testUrl = getApiUrl('/test');
     console.log("Using API URL:", testUrl);
     
     const response = await fetch(testUrl, {

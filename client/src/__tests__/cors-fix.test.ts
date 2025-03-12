@@ -1,20 +1,31 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getApiUrl, getApiBaseUrl } from '../lib/api';
 
-// Mock the import.meta.env
-vi.mock('../lib/api', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    getApiBaseUrl: vi.fn(),
-    getApiUrl: vi.fn(),
-  };
-});
+// Mock window.location
+const mockLocation = {
+  origin: 'https://careerpathfinder.io',
+  hostname: 'careerpathfinder.io'
+};
+
+// Mock import.meta.env
+vi.mock('../lib/api', () => ({
+  getApiBaseUrl: vi.fn(),
+  getApiUrl: vi.fn()
+}));
 
 describe('CORS Fix Tests', () => {
   // Reset mocks between tests
   beforeEach(() => {
     vi.resetAllMocks();
+    
+    // Mock window.location
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true
+    });
+    
+    // Import the real functions
+    vi.doUnmock('../lib/api');
   });
 
   afterEach(() => {
@@ -84,5 +95,73 @@ describe('CORS Fix Tests', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe('API URL Generation with CORS Fix', () => {
+  beforeEach(() => {
+    // Reset mocks
+    vi.resetAllMocks();
+    
+    // Mock window.location
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true
+    });
+    
+    // Import the real functions
+    vi.doUnmock('../lib/api');
+  });
+
+  it('should use the current domain in production', () => {
+    // Mock import.meta.env
+    vi.stubGlobal('import.meta', {
+      env: {
+        MODE: 'production',
+        VITE_API_URL: undefined
+      }
+    });
+    
+    // Call the function
+    const baseUrl = getApiBaseUrl();
+    
+    // Verify it uses the current domain
+    expect(baseUrl).toBe('https://careerpathfinder.io');
+  });
+
+  it('should use the environment variable if provided', () => {
+    // Mock import.meta.env
+    vi.stubGlobal('import.meta', {
+      env: {
+        MODE: 'production',
+        VITE_API_URL: 'https://api.example.com'
+      }
+    });
+    
+    // Call the function
+    const baseUrl = getApiBaseUrl();
+    
+    // Verify it uses the environment variable
+    expect(baseUrl).toBe('https://api.example.com');
+  });
+
+  it('should generate correct API URLs in production', () => {
+    // Mock import.meta.env
+    vi.stubGlobal('import.meta', {
+      env: {
+        MODE: 'production',
+        VITE_API_URL: undefined
+      }
+    });
+    
+    // Test various endpoint formats
+    const url1 = getApiUrl('/test');
+    const url2 = getApiUrl('test');
+    const url3 = getApiUrl('/api/test');
+    
+    // Verify the URLs are correct
+    expect(url1).toBe('https://careerpathfinder.io/api/test');
+    expect(url2).toBe('https://careerpathfinder.io/api/test');
+    expect(url3).toBe('https://careerpathfinder.io/api/test');
   });
 }); 

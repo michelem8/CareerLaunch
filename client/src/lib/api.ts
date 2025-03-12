@@ -13,10 +13,11 @@ export const getApiBaseUrl = (): string => {
   // Check if we're in production on the main domain
   const isProduction = import.meta.env.MODE === 'production';
   
-  // In production environment, use relative URLs to avoid CORS issues
+  // In production environment, use the current domain to avoid CORS issues
   if (isProduction) {
-    // Using relative URLs in production avoids CORS issues between www and non-www domains
-    return '';
+    // Get the current domain (with protocol) to avoid CORS issues between www and non-www
+    const currentDomain = window.location.origin;
+    return currentDomain;
   }
 
   // Development fallback
@@ -36,6 +37,11 @@ export const getApiUrl = (endpoint: string): string => {
   let normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   if (!normalizedEndpoint.startsWith('/api/') && !normalizedEndpoint.includes('/api/')) {
     normalizedEndpoint = `/api${normalizedEndpoint}`;
+  }
+  
+  // If we're using a full domain (not empty string), make sure we don't duplicate /api
+  if (baseUrl && normalizedEndpoint.startsWith('/api/') && baseUrl.endsWith('/api')) {
+    normalizedEndpoint = normalizedEndpoint.substring(4); // Remove the leading /api
   }
   
   return `${baseUrl}${normalizedEndpoint}`;
@@ -84,7 +90,7 @@ export const testApiConnectivity = async (): Promise<{
   details?: any;
 }> => {
   try {
-    const url = getApiUrl('/api/test');
+    const url = getApiUrl('/test');
     console.log(`Testing API connectivity at: ${url}`);
     
     const response = await fetch(url, {
@@ -131,7 +137,7 @@ export const testApiConnectivity = async (): Promise<{
     return {
       success: false,
       error: error.message,
-      url: getApiUrl('/api/test'),
+      url: getApiUrl('/test'),
       details: {
         name: error.name,
         stack: error.stack,
