@@ -12,6 +12,32 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { useState } from "react";
 import { z } from "zod";
 
+// Add test function to diagnose API connectivity
+const testApiEndpoint = async () => {
+  try {
+    console.log("Testing API connectivity...");
+    const response = await fetch("/api/test", {
+      method: "GET",
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    console.log("Test response status:", response.status);
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Test endpoint response:", data);
+      return true;
+    } else {
+      console.error("Test endpoint failed with status:", response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error("Error testing API endpoint:", error);
+    return false;
+  }
+};
+
 type SurveyStepsProps = {
   onComplete: () => void;
   onStepChange: (step: number, data?: any) => void;
@@ -126,6 +152,10 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
     mutationFn: async (data: { currentRole: string; targetRole: string }) => {
       console.log("Saving roles:", data);
       try {
+        // Test the API connectivity first
+        const testResult = await testApiEndpoint();
+        console.log("API test result:", testResult);
+        
         // Log additional debugging info
         console.log("Environment:", import.meta.env.MODE);
         console.log("Current URL:", window.location.href);
