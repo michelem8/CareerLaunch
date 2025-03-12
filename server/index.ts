@@ -37,27 +37,58 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
     ] 
   : ['http://localhost:5173']; // Vite's default development port
 
+// CORS middleware with improved handling
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin;
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    // Set CORS headers for preflight requests
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept, X-CSRF-Token, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400'); // 24 hours
+    
+    // Respond with 204 No Content for OPTIONS requests
+    return res.status(204).end();
+  }
+  
+  // For non-OPTIONS requests, set standard CORS headers
+  if (origin) {
+    // Check if the origin is allowed
+    const isAllowed = allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production';
+    
+    if (isAllowed) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      console.log(`Origin allowed by CORS policy: ${origin}`);
+    } else {
+      console.warn(`Origin rejected by CORS policy: ${origin}`);
+    }
+  }
+  
+  next();
+});
+
+// Also keep the standard cors middleware for compatibility
 app.use(cors({
   origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
     // Allow requests with no origin (like mobile apps, curl requests)
     if (!origin) {
-      console.log('Request with no origin allowed');
       return callback(null, true);
     }
     
     // Check if the origin is in our allowed list
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
-      console.log(`Origin allowed by CORS policy: ${origin}`);
       return callback(null, true);
     }
     
-    // Log rejected origins for debugging
-    console.warn(`Origin rejected by CORS policy: ${origin}`);
     return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept', 'X-CSRF-Token', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Date', 'X-Api-Version']
 }));
 
 // Add a debug endpoint to check CORS headers
@@ -68,7 +99,7 @@ app.options('/api/test', (req: Request, res: Response) => {
   // Set explicit CORS headers for the OPTIONS request
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept, X-CSRF-Token, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
   res.header('Access-Control-Allow-Credentials', 'true');
   
   res.status(200).end();
