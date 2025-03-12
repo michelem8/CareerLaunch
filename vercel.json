@@ -1,7 +1,13 @@
 {
   "redirects": [
     {
-      "source": "https://www.careerpathfinder.io/:path*",
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.careerpathfinder.io"
+        }
+      ],
       "destination": "https://careerpathfinder.io/:path*",
       "permanent": true
     }
