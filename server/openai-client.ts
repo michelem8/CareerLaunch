@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { Configuration, OpenAIApi } from "openai";
 import { config } from "dotenv";
 import path from "path";
 
@@ -8,7 +8,14 @@ console.log('Loading OpenAI configuration from:', envPath);
 config({ path: envPath });
 
 const apiKey = process.env.OPENAI_API_KEY;
-console.log('OpenAI API Key:', apiKey ? `${apiKey.substring(0, 7)}...` : 'Not found');
+console.log('OpenAI API Key Status:', apiKey ? 'Present' : 'Missing');
+if (apiKey) {
+  console.log('OpenAI API Key Format Check:', {
+    length: apiKey.length,
+    startsWithSk: apiKey.startsWith('sk-'),
+    firstFiveChars: apiKey.substring(0, 5) + '...'
+  });
+}
 
 // Warn about missing API key but don't throw an error
 if (!apiKey) {
@@ -19,7 +26,21 @@ if (apiKey && !apiKey.startsWith('sk-')) {
   console.warn('Warning: OpenAI API key does not start with "sk-". This may cause authentication issues.');
 }
 
-export const openai = apiKey ? new OpenAI({
-  apiKey,
-  dangerouslyAllowBrowser: process.env.NODE_ENV === 'test' // Only allow in test environment
-}) : null; 
+// Use a try/catch block to handle any initialization errors
+let openaiClient = null;
+try {
+  if (apiKey) {
+    // For OpenAI v3, we need to create a Configuration first, then pass it to OpenAIApi
+    const configuration = new Configuration({
+      apiKey: apiKey,
+    });
+    openaiClient = new OpenAIApi(configuration);
+    console.log('OpenAI client successfully initialized');
+  } else {
+    console.log('OpenAI client not initialized due to missing API key');
+  }
+} catch (error) {
+  console.error('Error initializing OpenAI client:', error);
+}
+
+export const openai = openaiClient; 

@@ -6,6 +6,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('==== API HANDLER START: /api/survey/complete ====');
   console.log('Request method:', req.method);
   console.log('Environment:', process.env.NODE_ENV);
+  console.log('Environment variables:', {
+    OPENAI_API_KEY_EXISTS: Boolean(process.env.OPENAI_API_KEY),
+    OPENAI_API_KEY_PREFIX: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 5) + '...' : 'Not set'
+  });
   
   // Always set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');

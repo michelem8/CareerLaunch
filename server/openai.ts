@@ -1,5 +1,5 @@
 import { openai } from "./openai-client";
-// Remove specific import and use a more generic interface
+// Interface for our chat messages - simplified for v3 compatibility
 interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -17,7 +17,8 @@ export async function analyzeResume(resumeText: string) {
       };
     }
 
-    const response = await openai.chat.completions.create({
+    // For OpenAI v3, we use createChatCompletion instead of chat.completions.create
+    const response = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
       messages: [
         {
@@ -46,17 +47,19 @@ For example:
   * Retail Operations Manager
   * Customer Experience Manager
   * Sales Team Lead
-  * Training and Development Manager`,
+  * Training and Development Manager
+
+IMPORTANT: Please format your response as a valid JSON object with the keys: skills, experience, education, and suggestedRoles.`,
         },
         {
           role: "user",
           content: resumeText,
         },
-      ],
-      response_format: { type: "json_object" }
+      ]
     });
 
-    const content = response.choices[0].message.content;
+    // For OpenAI v3, the response format is different
+    const content = response.data.choices[0].message?.content;
     if (!content) {
       throw new Error("No response received from OpenAI");
     }
@@ -167,15 +170,17 @@ Please provide a detailed analysis of:
 
     console.log("Sending request to OpenAI with messages:", JSON.stringify(messages, null, 2));
 
-    const response = await openai.chat.completions.create({
+    // For OpenAI v3, we use createChatCompletion
+    const response = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
       messages,
-      response_format: { type: "json_object" }
+      max_tokens: 1000 // Ensure we get a complete response
     });
 
-    console.log("Raw OpenAI response:", JSON.stringify(response, null, 2));
+    console.log("Raw OpenAI response:", JSON.stringify(response.data, null, 2));
 
-    const content = response.choices[0].message.content;
+    // For OpenAI v3, the response format is different
+    const content = response.data.choices[0].message?.content;
     if (!content) {
       throw new Error("No response received from OpenAI");
     }
