@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RecommendationsList } from './RecommendationsList';
 import CourseRecommendations from './CourseRecommendations';
+import { generateCareerRecommendations } from '@/lib/ai-provider';
+import { useQuery } from '@tanstack/react-query';
 
 interface Skill {
   name: string;
@@ -75,6 +77,29 @@ export const RoleCard: React.FC<{ title: string; subtitle?: string; skills: stri
 export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   // Add fallback data if resumeAnalysis is missing, but only in development
   const isProduction = import.meta.env.MODE === 'production';
+  const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
+  const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
+  
+  // In production, always try to get AI-generated recommendations
+  useEffect(() => {
+    const fetchAIRecommendations = async () => {
+      if (isProduction && user.resumeAnalysis?.missingSkills.length) {
+        setIsLoadingAi(true);
+        try {
+          const result = await generateCareerRecommendations(user.resumeAnalysis.missingSkills);
+          if (result.recommendations.length > 0) {
+            setAiRecommendations(result.recommendations);
+          }
+        } catch (error) {
+          console.error('Error getting AI recommendations:', error);
+        } finally {
+          setIsLoadingAi(false);
+        }
+      }
+    };
+    
+    fetchAIRecommendations();
+  }, [isProduction, user.resumeAnalysis?.missingSkills]);
   
   if (!user.resumeAnalysis && !isProduction) {
     console.warn('CareerDashboard - resumeAnalysis is missing, creating fallback data (development only)');
@@ -128,8 +153,12 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   // In production, use potentially empty arrays to show proper empty states
   const suggestedRoles = user.resumeAnalysis?.suggestedRoles || [];
   const missingSkills = user.resumeAnalysis?.missingSkills || [];
-  const recommendations = user.resumeAnalysis?.recommendations || [];
   
+  // Use AI recommendations in production if available, otherwise fall back to stored recommendations
+  const recommendations = isProduction && aiRecommendations.length > 0 
+    ? aiRecommendations 
+    : (user.resumeAnalysis?.recommendations || []);
+
   // Add more detailed logging
   console.log('CareerDashboard - user data:', JSON.stringify(user, null, 2));
   console.log('CareerDashboard - current skills:', currentSkills);
@@ -169,9 +198,21 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-2xl font-semibold mb-4">Recommendations</h2>
+        <h2 className="text-2xl font-semibold mb-4">
+          AI-Powered Recommendations
+          {isProduction && (
+            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+              AI Enhanced
+            </span>
+          )}
+        </h2>
         <div className="bg-white rounded-lg p-6 shadow-sm min-h-[300px] max-h-[800px] overflow-y-auto">
-          {recommendations.length > 0 ? (
+          {isLoadingAi ? (
+            <div className="flex flex-col items-center justify-center h-48">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+              <p className="text-gray-600">Generating personalized AI recommendations...</p>
+            </div>
+          ) : recommendations.length > 0 ? (
             <RecommendationsList recommendations={recommendations} />
           ) : (
             <div className="text-gray-500 italic">

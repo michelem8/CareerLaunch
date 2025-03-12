@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { generateCourseRecommendations } from '@/lib/ai-provider';
 
 interface Course {
   id: string;
@@ -21,9 +22,25 @@ interface CourseRecommendationsProps {
 }
 
 const CourseRecommendations: React.FC<CourseRecommendationsProps> = ({ missingSkills }) => {
+  // Use the new AI-powered recommendations in production
+  const isProduction = import.meta.env.MODE === 'production';
+  
   const { data: courses, isLoading, error } = useQuery<Course[]>({
     queryKey: ['courses', missingSkills],
     queryFn: async () => {
+      // In production, we'll use the OpenAI integration
+      if (isProduction) {
+        try {
+          const result = await generateCourseRecommendations(missingSkills);
+          return result.courses;
+        } catch (error) {
+          console.error('Error using AI provider for courses:', error);
+          // Fall back to API if OpenAI fails
+          console.log('Falling back to API endpoint...');
+        }
+      }
+      
+      // Standard API endpoint as fallback
       const queryParams = new URLSearchParams();
       missingSkills.forEach(skill => queryParams.append('skills', skill));
       const response = await apiRequest('GET', `/api/courses/recommended?${queryParams.toString()}`);
@@ -37,7 +54,7 @@ const CourseRecommendations: React.FC<CourseRecommendationsProps> = ({ missingSk
 
   // Detect mock data in production
   useEffect(() => {
-    if (courses && courses.length > 0 && import.meta.env.MODE === 'production') {
+    if (courses && courses.length > 0 && isProduction) {
       // Check for known mock data characteristics
       const mockDataCheck = courses.some(course => 
         // Check for common mock data IDs or titles
@@ -52,7 +69,7 @@ const CourseRecommendations: React.FC<CourseRecommendationsProps> = ({ missingSk
           'Make sure OpenAI integration is properly configured.');
       }
     }
-  }, [courses]);
+  }, [courses, isProduction]);
 
   if (!missingSkills.length) {
     console.log('Rendering: No skill gaps identified');
