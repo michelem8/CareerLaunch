@@ -7,6 +7,8 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Survey from "@/pages/survey";
 import CareerDashboard from "@/pages/CareerDashboard";
+import AdminPanel from './components/AdminPanel';
+import NavBar from './components/NavBar';
 
 function Router() {
   return (
@@ -14,6 +16,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/survey" component={Survey} />
       <Route path="/dashboard" component={CareerDashboard} />
+      <Route path="/admin" component={AdminPanel} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -22,6 +25,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <NavBar />
       <Router />
       <Toaster />
       <Analytics />

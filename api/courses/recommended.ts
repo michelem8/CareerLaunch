@@ -1,6 +1,28 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { Configuration, OpenAIApi } from 'openai';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+// Initialize OpenAI client
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
+// Course interface
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  platform: string;
+  difficulty: string;
+  duration: string;
+  skills: string[];
+  url: string;
+  rating?: number;
+  price?: string;
+  aiMatchScore?: number;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Always set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
@@ -21,52 +43,98 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // Get skills from query parameters 
       const skills = req.query.skills || [];
-      console.log('Requested skills:', skills);
+      const missingSkills = Array.isArray(skills) ? skills.map(s => String(s)) : [String(skills)];
       
-      // Mock response with recommended courses
-      const recommendedCourses = [
-        {
-          id: 1,
-          title: "Engineering Leadership Fundamentals",
-          description: "Learn the core principles of leading engineering teams effectively",
-          imageUrl: "https://images.unsplash.com/photo-1523240795612-9a054b0db644",
-          skills: ["Engineering Leadership", "Team Management", "Technical Decision Making"],
-          difficulty: "intermediate",
-          industry: "enterprise-software",
-          learningStyle: "practical",
-          timeCommitment: "4-8",
-          level: "intermediate"
-        },
-        {
-          id: 2,
-          title: "Technical Architecture for Managers",
-          description: "Bridge the gap between management and technical architecture",
-          imageUrl: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4",
-          skills: ["Technical Architecture", "System Design", "Architecture Planning"],
-          difficulty: "advanced",
-          industry: "enterprise-software",
-          learningStyle: "project_based",
-          timeCommitment: "4-8",
-          level: "advanced"
-        },
-        {
-          id: 3,
-          title: "Cross-functional Communication",
-          description: "Effectively communicate across engineering and product teams",
-          imageUrl: "https://images.unsplash.com/photo-1522071820081-009f0129c71c",
-          skills: ["Cross-functional Communication", "Leadership", "Team Collaboration"],
-          difficulty: "intermediate",
-          industry: "product-management",
-          learningStyle: "interactive",
-          timeCommitment: "2-4",
-          level: "intermediate"
+      console.log('Requested skills:', missingSkills);
+      
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY is not configured');
+      }
+      
+      if (missingSkills.length === 0) {
+        return res.status(200).json([]);
+      }
+
+      // Mock user data for OpenAI request
+      const userData = {
+        currentRole: "Product Manager",
+        targetRole: "Engineering Manager",
+        currentSkills: ["JavaScript", "React", "Product Management"],
+        missingSkills: missingSkills,
+        preferences: {
+          preferredIndustries: ["enterprise-software", "ai-ml"],
+          learningStyles: ["practical", "self-paced"],
+          timeCommitment: "4-8"
         }
-      ];
+      };
+
+      // Use OpenAI to generate course recommendations
+      const response = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: `You are a career development expert specializing in course recommendations.
+Your task is to generate a list of high-quality online courses that would help the user acquire their missing skills.
+For each missing skill, recommend 1-2 relevant courses from reputable platforms like Coursera, Udemy, edX, or similar.
+
+You must return a JSON object with the following exact structure:
+{
+  "courses": [
+    {
+      "id": "unique-id-1",
+      "title": "Course Title",
+      "description": "2-3 sentence description",
+      "platform": "Platform Name",
+      "difficulty": "Beginner|Intermediate|Advanced",
+      "duration": "Duration (e.g., 6 weeks)",
+      "skills": ["Skill 1", "Skill 2"],
+      "url": "https://course-url.com",
+      "price": "Free|$XX.XX",
+      "rating": 4.5,
+      "aiMatchScore": 85
+    }
+  ]
+}`
+          },
+          {
+            role: "user",
+            content: JSON.stringify(userData)
+          }
+        ]
+      });
+
+      if (!response.data.choices[0].message?.content) {
+        throw new Error("No response received from OpenAI");
+      }
+
+      // Parse OpenAI response
+      const content = response.data.choices[0].message.content;
+      console.log('Raw OpenAI response:', content);
+
+      // Parse the JSON response
+      const parsed = JSON.parse(content);
+      if (!parsed.courses || !Array.isArray(parsed.courses)) {
+        throw new Error("Invalid response format from OpenAI");
+      }
+
+      // Return the course recommendations
+      const recommendations = parsed.courses as Course[];
       
-      res.status(200).json(recommendedCourses);
+      // Sort by AI match score
+      const sortedRecommendations = recommendations.sort((a, b) => {
+        const scoreA = a.aiMatchScore || 0;
+        const scoreB = b.aiMatchScore || 0;
+        return scoreB - scoreA;
+      });
+      
+      res.status(200).json(sortedRecommendations);
     } catch (error) {
-      console.error('Error getting recommended courses:', error);
-      res.status(500).json({ error: 'Failed to get recommended courses' });
+      console.error('Error getting course recommendations:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to get recommended courses',
+        details: process.env.NODE_ENV === 'development' ? error : undefined 
+      });
     }
   } else {
     // Method not allowed

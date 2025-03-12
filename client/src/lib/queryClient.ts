@@ -269,9 +269,12 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
   } catch (error) {
     console.error(`API request failed:`, error);
     
-    // Check if this is a CORS error
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      console.error('This may be a CORS issue. Check that the server allows requests from this origin.');
+    // Check if this is a CORS error or network error
+    if (error instanceof TypeError && 
+       (error.message.includes('Failed to fetch') || 
+        error.message.includes('Network request failed'))) {
+      
+      console.error('This may be a CORS or network issue. Check that the server allows requests from this origin.');
       console.error('Current origin:', window.location.origin);
       console.error('Target URL:', fullUrl);
       
@@ -287,6 +290,9 @@ export const apiRequest = async (method: string, path: string, body?: unknown) =
           return mockResponse;
         }
       }
+      
+      // In production, throw the error to be handled by the calling code
+      console.error('In production environment - not using mock data.');
     }
     
     throw error;

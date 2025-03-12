@@ -1,7 +1,7 @@
 // service worker for CareerLaunch
 const CACHE_NAME = 'career-launch-cache-v1';
 
-// Mock data for API fallbacks
+// Mock data for API fallbacks (only used when offline or explicitly in development mode)
 const API_MOCKS = {
   '/api/users/me': {
     id: 1,
@@ -176,16 +176,38 @@ self.addEventListener('activate', (event) => {
   return self.clients.claim();
 });
 
-// Helper function to check if a URL is an API request
-function isApiRequest(url) {
-  const urlObj = new URL(url);
-  return urlObj.pathname.startsWith('/api/');
+// Helper function to get the API path from a URL
+function getApiPath(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.pathname;
+  } catch (e) {
+    console.error('Invalid URL:', url);
+    return '';
+  }
 }
 
-// Extract the API path from a URL
-function getApiPath(url) {
-  const urlObj = new URL(url);
-  return urlObj.pathname;
+// Check if a URL is an API request
+function isApiRequest(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.pathname.startsWith('/api/');
+  } catch (e) {
+    return false;
+  }
+}
+
+// Check if we're in development mode
+function isDevelopmentMode() {
+  try {
+    // Check if hostname is localhost or similar
+    const hostname = self.location.hostname;
+    return hostname === 'localhost' || 
+           hostname === '127.0.0.1' || 
+           hostname.includes('.localhost');
+  } catch (e) {
+    return false;
+  }
 }
 
 // Fetch event - handle network requests
@@ -197,30 +219,57 @@ self.addEventListener('fetch', (event) => {
     const apiPath = getApiPath(url);
     
     event.respondWith(
-      fetch(event.request).catch(() => {
-        console.log('API request failed, using mock data for:', apiPath);
-        
-        // Check if we have a mock for this API path
-        if (API_MOCKS[apiPath]) {
-          // Return mock data
+      // First try the network request
+      fetch(event.request)
+        .then(response => {
+          // If we got a valid response, use it
+          if (response && response.status === 200) {
+            return response;
+          }
+          
+          // If response is not OK, throw to trigger fallback
+          throw new Error('Network response was not ok');
+        })
+        .catch(() => {
+          console.log('API request failed, checking if we should use mock data for:', apiPath);
+          
+          // Only use mock data when offline or in development mode
+          const inDevMode = isDevelopmentMode();
+          if (inDevMode) {
+            console.log('Using mock data in development mode for:', apiPath);
+          } else {
+            console.log('Network request failed but not using mock data in production for:', apiPath);
+            // In production, always return a proper error, never mock data
+            return new Response(
+              JSON.stringify({ error: 'Network request failed' }),
+              { 
+                status: 503, 
+                headers: { 'Content-Type': 'application/json' }
+              }
+            );
+          }
+          
+          // Check if we have a mock for this API path
+          if (API_MOCKS[apiPath]) {
+            // Return mock data in development or when offline
+            return new Response(
+              JSON.stringify(API_MOCKS[apiPath]),
+              { 
+                status: 200, 
+                headers: { 'Content-Type': 'application/json' }
+              }
+            );
+          }
+          
+          // Return a generic error if no mock is available
           return new Response(
-            JSON.stringify(API_MOCKS[apiPath]),
+            JSON.stringify({ error: 'API request failed and no mock available' }),
             { 
-              status: 200, 
+              status: 500, 
               headers: { 'Content-Type': 'application/json' }
             }
           );
-        }
-        
-        // Return a generic error if no mock is available
-        return new Response(
-          JSON.stringify({ error: 'API request failed' }),
-          { 
-            status: 500, 
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
-      })
+        })
     );
   } else {
     // Default behavior for non-API requests

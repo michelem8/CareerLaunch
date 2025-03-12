@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -34,6 +34,25 @@ const CourseRecommendations: React.FC<CourseRecommendationsProps> = ({ missingSk
     },
     enabled: missingSkills.length > 0,
   });
+
+  // Detect mock data in production
+  useEffect(() => {
+    if (courses && courses.length > 0 && import.meta.env.MODE === 'production') {
+      // Check for known mock data characteristics
+      const mockDataCheck = courses.some(course => 
+        // Check for common mock data IDs or titles
+        (typeof course.id === 'number' && course.id <= 3) || 
+        course.title === "Engineering Leadership Fundamentals" ||
+        course.title === "Technical Architecture for Managers" ||
+        course.title === "Cross-functional Communication"
+      );
+      
+      if (mockDataCheck) {
+        console.warn('⚠️ Warning: Detected possible mock data in production environment. ' +
+          'Make sure OpenAI integration is properly configured.');
+      }
+    }
+  }, [courses]);
 
   if (!missingSkills.length) {
     console.log('Rendering: No skill gaps identified');
