@@ -43,9 +43,13 @@ app.use((req, res, next) => {
   if (req.originalUrl.startsWith('/api/') || 
       req.path.startsWith('/api/') || 
       req.url.startsWith('/api/') ||
+      req.originalUrl.includes('/api/') ||
       // Handle test endpoints specifically
       req.path === '/test' ||
-      req.path === '/cors-test') {
+      req.path === '/cors-test' ||
+      req.path === '/api/test' ||
+      req.path === '/api/cors-test' ||
+      req.path.includes('/survey/')) {
     req.isApiRequest = true;
     
     // Ensure all API responses have proper JSON content type
@@ -253,8 +257,18 @@ async function initializeDefaultUser() {
     // This ensures API calls don't get redirected incorrectly
     if (process.env.NODE_ENV === 'production') {
       app.use((req, res, next) => {
-        // Skip redirect middleware for API routes
-        if (req.isApiRequest || req.path.startsWith('/api/')) {
+        // Skip redirect middleware for API routes - use enhanced detection
+        if (req.isApiRequest || 
+            req.originalUrl.startsWith('/api/') || 
+            req.path.startsWith('/api/') || 
+            req.url.startsWith('/api/') ||
+            req.originalUrl.includes('/api/') ||
+            req.path === '/test' ||
+            req.path === '/cors-test' ||
+            req.path === '/api/test' ||
+            req.path === '/api/cors-test' ||
+            req.path.includes('/survey/')) {
+          console.log(`[Redirect] Skipping redirect for API route: ${req.originalUrl}`);
           return next();
         }
         // Apply redirect middleware for non-API routes

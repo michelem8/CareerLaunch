@@ -11,7 +11,8 @@
     "start": "cd server && npm start",
     "dev": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev\"",
     "vercel-build": "cd client && npm install --include=dev && npm run build",
-    "test": "jest"
+    "test": "jest",
+    "test:api": "jest server/__tests__/api-routes.test.ts"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -25,6 +26,7 @@
     "ts-jest": "^29.2.6"
   },
   "dependencies": {
+    "express": "^4.21.2",
     "openai": "^3.3.0"
   }
 }

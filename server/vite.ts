@@ -134,9 +134,18 @@ export function serveStatic(app: Express) {
 
   // Serve index.html for all non-API routes - using a named function to avoid linter errors
   function serveIndexHtml(req: Request, res: Response, next: NextFunction) {
-    // Skip API routes - ensure this check is thorough
-    if (req.isApiRequest || req.originalUrl.startsWith('/api/') || req.path.startsWith('/api/')) {
-      console.log(`[Static Server] Skipping static serve for API route: ${req.originalUrl}`);
+    // Improve API route detection - add multiple checks for robustness
+    if (req.isApiRequest || 
+        req.originalUrl.startsWith('/api/') || 
+        req.path.startsWith('/api/') || 
+        req.url.startsWith('/api/') ||
+        req.originalUrl.includes('/api/') ||
+        req.path === '/api/test' ||
+        req.path === '/api/cors-test' ||
+        req.path === '/test' ||
+        req.path === '/cors-test' ||
+        req.path.includes('/survey/')) {
+      console.log(`[Static Server] Detected API route, skipping static serve: ${req.originalUrl} (path: ${req.path})`);
       return next();
     }
     
