@@ -132,17 +132,19 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   useEffect(() => {
     const fetchAIRecommendations = async () => {
       if (!normalizedUser.resumeAnalysis.missingSkills || normalizedUser.resumeAnalysis.missingSkills.length === 0) {
-        console.warn('No missing skills found, cannot fetch AI recommendations');
-        setAiError('No missing skills identified');
+        // In production with Supabase, just provide default recommendations instead of showing an error
+        const defaultRecommendations = [
+          "Complete your career profile to get personalized recommendations",
+          "Add your current skills in your profile settings",
+          "Set your target role to see skill gaps",
+          "Upload your resume for a comprehensive analysis"
+        ];
+        setAiRecommendations(defaultRecommendations);
         
-        // In production, we'll set default recommendations if the API response fails
-        if (isProduction) {
-          setAiRecommendations([
-            "Complete your career profile to get personalized recommendations",
-            "Add your current skills in your profile settings",
-            "Set your target role to see skill gaps",
-            "Upload your resume for a comprehensive analysis"
-          ]);
+        // Only log the warning in development mode
+        if (!isProduction) {
+          console.warn('No missing skills found, using default recommendations');
+          setAiError('No missing skills identified');
         }
         return;
       }
@@ -186,7 +188,7 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
     };
     
     fetchAIRecommendations();
-  }, [normalizedUser.resumeAnalysis?.missingSkills, isProduction]);
+  }, [normalizedUser.resumeAnalysis.missingSkills, isProduction]);
   
   // Only use fallback data in development, never in production
   if (!normalizedUser.resumeAnalysis && !isProduction) {

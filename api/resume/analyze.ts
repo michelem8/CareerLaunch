@@ -1,4 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { storage } from '../../server/storage';
+import { ResumeAnalysis } from '../../shared/schema';
 
 // This is a simplified version of the resume analysis API for troubleshooting
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -24,104 +26,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle the POST request for analyzing resume
   if (req.method === 'POST') {
     try {
-      const { resumeText, currentRole, targetRole } = req.body;
+      const { resumeText, userId } = req.body;
       console.log('Received resume text for analysis (length):', resumeText?.length || 0);
-      console.log('Current role:', currentRole);
-      console.log('Target role:', targetRole);
+      console.log('User ID:', userId);
 
-      // Check if there's content to analyze
-      if (!resumeText || resumeText.length === 0) {
-        return res.status(400).json({
-          error: { 
-            code: '400', 
-            message: 'Resume text is required for analysis'
-          }
-        });
+      if (!resumeText) {
+        return res.status(400).json({ error: 'Resume text is required' });
       }
 
-      // Ensure we always have a target role
-      const effectiveTargetRole = targetRole || 'Software Engineer';
-      console.log('Using target role for analysis:', effectiveTargetRole);
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
 
-      // Extract skills from the resume (simplified extraction)
-      const extractedSkills = extractSkillsFromResume(resumeText);
-      console.log('Extracted skills from resume:', extractedSkills);
+      console.log('Analyzing resume...');
+      const result = await analyzeResume(resumeText);
+      console.log('Analysis complete');
 
-      // Create a mock analysis response - ALWAYS include missing skills, even in production
-      const mockAnalysis = {
-        user: {
-          id: 1,
-          username: "demo_user",
-          resumeAnalysis: {
-            skills: extractedSkills.length > 0 ? extractedSkills : [
-              "JavaScript", 
-              "React", 
-              "Node.js", 
-              "TypeScript", 
-              "HTML/CSS", 
-              "API Design", 
-              "Problem Solving", 
-              "Agile/Scrum"
-            ],
-            experience: [
-              "Frontend Developer at TechCorp (2020-2023)",
-              "Web Developer at StartupX (2018-2020)"
-            ],
-            education: [
-              "Bachelor of Science, Computer Science, University (2018)"
-            ],
-            suggestedRoles: [
-              "Senior Frontend Developer", 
-              "Full Stack Engineer", 
-              "React Specialist", 
-              "UI Developer Team Lead"
-            ],
-            missingSkills: [
-              "Advanced State Management",
-              "Performance Optimization",
-              "Team Leadership",
-              "Architecture Design",
-              "Technical Documentation"
-            ],
-            recommendations: [
-              "Gain experience with advanced state management libraries like Redux Toolkit or MobX",
-              "Practice developing complex UIs with optimized rendering",
-              "Take on team leadership responsibilities in current role",
-              "Contribute to open source projects to build portfolio",
-              "Develop communication skills for technical leadership"
-            ]
-          }
-        },
-        skillGap: {
-          missingSkills: [
-            "Advanced State Management",
-            "Performance Optimization",
-            "Team Leadership",
-            "Architecture Design",
-            "Technical Documentation"
-          ],
-          recommendations: [
-            "Gain experience with advanced state management libraries like Redux Toolkit or MobX",
-            "Practice developing complex UIs with optimized rendering",
-            "Take on team leadership responsibilities in current role",
-            "Contribute to open source projects to build portfolio",
-            "Develop communication skills for technical leadership"
-          ]
-        }
+      // Ensure result includes all expected fields with default values if needed
+      const analysis = {
+        skills: result.skills || [],
+        experience: result.experience || [],
+        education: result.education || [],
+        suggestedRoles: result.suggestedRoles || [],
+        missingSkills: result.missingSkills || [],
+        recommendations: result.recommendations || []
       };
 
-      console.log('Sending mock analysis response with missing skills');
-      res.status(200).json(mockAnalysis);
-    } catch (error) {
-      console.error('Error in simplified resume analysis endpoint:', error);
-      console.error('Full error details:', error instanceof Error ? error.stack : 'No stack trace');
-      
-      res.status(500).json({ 
-        error: { 
-          code: '500', 
-          message: 'A server error has occurred',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }
+      // Save the analysis to storage
+      await storage.updateUserResumeAnalysis(userId, analysis);
+      console.log('Analysis saved to storage for user', userId);
+
+      return res.status(200).json(analysis);
+    } catch (error: any) {
+      console.error('Error analyzing resume:', error.message);
+      return res.status(500).json({
+        error: 'Failed to analyze resume',
+        details: error.message
       });
     }
   } else {
@@ -137,19 +77,95 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('==== API HANDLER END: /api/resume/analyze (SIMPLIFIED) ====');
 }
 
-// Helper function to extract skills from resume text (simplified)
+/**
+ * Extract skills from resume text using simple pattern matching
+ */
 function extractSkillsFromResume(resumeText: string): string[] {
-  // Common tech skills to look for
+  // This is a simplified implementation
   const commonSkills = [
-    "JavaScript", "TypeScript", "React", "Vue", "Angular", "Node.js",
-    "Python", "Java", "C#", "C++", "Ruby", "PHP", "Go", "Rust",
-    "HTML", "CSS", "SQL", "NoSQL", "MongoDB", "PostgreSQL", "MySQL",
-    "AWS", "Azure", "GCP", "Docker", "Kubernetes", "CI/CD", "Git",
-    "Agile", "Scrum", "REST", "GraphQL", "Microservices", "DevOps"
+    "JavaScript", "TypeScript", "React", "Angular", "Vue.js", "Node.js", 
+    "Express", "Next.js", "HTML", "CSS", "SCSS", "SQL", "NoSQL", "MongoDB",
+    "PostgreSQL", "AWS", "Azure", "Docker", "Kubernetes", "Git", "GitHub",
+    "REST API", "GraphQL", "Redux", "Context API", "Jest", "Cypress",
+    "Webpack", "Python", "Java", "C#", ".NET", "PHP", "Ruby", "Go",
+    "CI/CD", "Agile", "Scrum", "Project Management"
   ];
-
-  // Return skills found in the resume
+  
+  // Simple check: see which skills are mentioned in the resume text
   return commonSkills.filter(skill => 
     resumeText.toLowerCase().includes(skill.toLowerCase())
   );
+}
+
+/**
+ * Analyze a resume using pattern matching
+ * In a production environment, we would use a more sophisticated AI model
+ */
+async function analyzeResume(resumeText: string): Promise<ResumeAnalysis> {
+  // Extract skills from resume
+  const extractedSkills = extractSkillsFromResume(resumeText);
+  
+  // For demo purposes, we'll provide some realistic-looking data
+  // In a real implementation, this would be determined by AI analysis
+  const missingSkills = [
+    "Advanced State Management",
+    "Performance Optimization",
+    "Team Leadership",
+    "Architecture Design",
+    "Technical Documentation"
+  ];
+  
+  const recommendations = [
+    "Gain experience with advanced state management libraries like Redux Toolkit or MobX",
+    "Practice developing complex UIs with optimized rendering",
+    "Take on team leadership responsibilities in current role",
+    "Contribute to open source projects to build portfolio",
+    "Develop communication skills for technical leadership"
+  ];
+  
+  const suggestedRoles = [
+    "Senior Frontend Developer", 
+    "Full Stack Engineer", 
+    "React Specialist", 
+    "UI Developer Team Lead"
+  ];
+  
+  // Extract experience and education using simple heuristics
+  const experience = extractExperienceSections(resumeText);
+  const education = extractEducationSections(resumeText);
+  
+  return {
+    skills: extractedSkills.length > 0 ? extractedSkills : [
+      "JavaScript", "React", "Node.js", "TypeScript", "HTML/CSS", 
+      "API Design", "Problem Solving", "Agile/Scrum"
+    ],
+    experience,
+    education,
+    suggestedRoles,
+    missingSkills,
+    recommendations
+  };
+}
+
+/**
+ * Extract experience sections from resume text
+ */
+function extractExperienceSections(resumeText: string): string[] {
+  // In a real implementation, this would use more sophisticated NLP
+  // For demo purposes, return a placeholder
+  return [
+    "Frontend Developer at TechCorp (2020-2023)",
+    "Web Developer at StartupX (2018-2020)"
+  ];
+}
+
+/**
+ * Extract education sections from resume text
+ */
+function extractEducationSections(resumeText: string): string[] {
+  // In a real implementation, this would use more sophisticated NLP
+  // For demo purposes, return a placeholder
+  return [
+    "Bachelor of Science, Computer Science, University (2018)"
+  ];
 } 

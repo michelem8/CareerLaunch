@@ -1,4 +1,5 @@
 import { User, Course, InsertUser, ResumeAnalysis, UserPreferences } from "@shared/schema";
+import { supabase, getUserProfile, getResumeAnalysis, updateResumeAnalysis } from './supabase-client';
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -267,4 +268,289 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class SupabaseStorage implements IStorage {
+  async getUser(userId: number): Promise<User | undefined> {
+    try {
+      // Convert numeric ID to string UUID (in a real implementation, you'd use actual UUIDs)
+      const userIdString = `${userId}`;
+      
+      // Get user profile from Supabase
+      const profile = await getUserProfile(userIdString);
+      
+      if (!profile) {
+        return undefined;
+      }
+      
+      // Get resume analysis data
+      const analysis = await getResumeAnalysis(userIdString);
+      
+      // Convert to application User format
+      return {
+        id: userId,
+        username: `user_${userId}`,
+        password: 'hashed_password', // In a real implementation, this should be properly managed
+        currentRole: profile.current_role,
+        targetRole: profile.target_role,
+        skills: profile.skills || [],
+        preferences: profile.preferences || null,
+        resumeAnalysis: analysis ? {
+          skills: analysis.skills || [],
+          missingSkills: analysis.missing_skills || [],
+          recommendations: analysis.recommendations || [],
+          suggestedRoles: analysis.suggested_roles || [],
+          experience: analysis.experience || [],
+          education: analysis.education || []
+        } : null,
+        hasCompletedSurvey: profile.has_completed_survey,
+        surveyStep: profile.survey_step || 1
+      };
+    } catch (error) {
+      console.error(`Error fetching user ${userId} from Supabase:`, error);
+      throw error;
+    }
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    try {
+      // In this implementation, we assume username is 'user_<id>'
+      const userId = parseInt(username.replace('user_', ''), 10);
+      return this.getUser(userId);
+    } catch (error) {
+      console.error(`Error fetching user by username ${username}:`, error);
+      throw error;
+    }
+  }
+  
+  async createUser(userData: InsertUser): Promise<User> {
+    try {
+      // Generate a new user ID
+      const { data: maxIdData } = await supabase
+        .from('user_profiles')
+        .select('user_id')
+        .order('user_id', { ascending: false })
+        .limit(1);
+        
+      const nextId = maxIdData && maxIdData.length > 0 
+        ? parseInt(maxIdData[0].user_id) + 1 
+        : 1;
+      
+      const userIdString = `${nextId}`;
+      
+      // Create user profile in Supabase
+      const { error } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: userIdString,
+          username: userData.username,
+          password: userData.password, // In a real implementation, this should be hashed
+          current_role: null,
+          target_role: null,
+          skills: [],
+          has_completed_survey: false,
+          survey_step: 1
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      return {
+        id: nextId,
+        username: userData.username,
+        password: userData.password,
+        currentRole: null,
+        targetRole: null,
+        skills: [],
+        resumeAnalysis: null,
+        preferences: null,
+        hasCompletedSurvey: false,
+        surveyStep: 1
+      };
+    } catch (error) {
+      console.error(`Error creating user:`, error);
+      throw error;
+    }
+  }
+  
+  async updateUserResumeAnalysis(userId: number, analysis: ResumeAnalysis): Promise<User> {
+    try {
+      // Convert numeric ID to string UUID
+      const userIdString = `${userId}`;
+      
+      // Update resume analysis
+      await updateResumeAnalysis(userIdString, {
+        skills: analysis.skills || [],
+        missing_skills: analysis.missingSkills || [],
+        recommendations: analysis.recommendations || [],
+        suggested_roles: analysis.suggestedRoles || [],
+        experience: analysis.experience || [],
+        education: analysis.education || []
+      });
+      
+      // Update user skills from analysis
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          skills: analysis.skills || [],
+          survey_step: 3,
+          has_completed_survey: true
+        })
+        .eq('user_id', userIdString);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Return updated user
+      const user = await this.getUser(userId);
+      if (!user) throw new Error(`User with ID ${userId} not found after update`);
+      return user;
+    } catch (error) {
+      console.error(`Error updating resume analysis for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  async updateUserSurvey(
+    userId: number,
+    currentRole: string,
+    targetRole: string,
+    preferences: UserPreferences
+  ): Promise<User> {
+    try {
+      const userIdString = `${userId}`;
+      
+      // Update user profile with survey data
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          current_role: currentRole,
+          target_role: targetRole,
+          preferences,
+          has_completed_survey: true,
+          survey_step: 3
+        })
+        .eq('user_id', userIdString);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Return updated user
+      const user = await this.getUser(userId);
+      if (!user) throw new Error(`User with ID ${userId} not found after update`);
+      return user;
+    } catch (error) {
+      console.error(`Error updating survey for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  async updateUserRoles(userId: number, currentRole: string, targetRole: string): Promise<User> {
+    try {
+      const userIdString = `${userId}`;
+      
+      // Update user roles
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          current_role: currentRole,
+          target_role: targetRole,
+          survey_step: 2
+        })
+        .eq('user_id', userIdString);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Return updated user
+      const user = await this.getUser(userId);
+      if (!user) throw new Error(`User with ID ${userId} not found after update`);
+      return user;
+    } catch (error) {
+      console.error(`Error updating roles for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  async completeUserSurvey(userId: number): Promise<User> {
+    try {
+      // Convert numeric ID to string UUID
+      const userIdString = `${userId}`;
+      
+      // Update user profile
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ 
+          has_completed_survey: true,
+          survey_step: 3
+        })
+        .eq('user_id', userIdString);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Return updated user
+      const user = await this.getUser(userId);
+      if (!user) throw new Error(`User with ID ${userId} not found after update`);
+      return user;
+    } catch (error) {
+      console.error(`Error completing survey for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  async getCourses(): Promise<Course[]> {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*');
+        
+      if (error) {
+        throw error;
+      }
+      
+      return data.map(course => ({
+        id: course.id,
+        title: course.title,
+        description: course.description,
+        platform: course.platform || 'Unknown',
+        difficulty: course.difficulty,
+        duration: course.duration || 'Unknown',
+        skills: course.skills || [],
+        url: course.url || '#',
+        price: course.price,
+        rating: course.rating,
+        aiMatchScore: course.ai_match_score
+      }));
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      return [];
+    }
+  }
+  
+  async getCoursesBySkills(skills: string[]): Promise<Course[]> {
+    if (!skills || skills.length === 0) {
+      return this.getCourses();
+    }
+    
+    try {
+      // In a real implementation, we would use a more sophisticated query
+      // Here we just get all courses and filter in-memory
+      const allCourses = await this.getCourses();
+      
+      return allCourses.filter(course => 
+        course.skills.some(skill => skills.includes(skill))
+      );
+    } catch (error) {
+      console.error('Error fetching courses by skills:', error);
+      return [];
+    }
+  }
+}
+
+export const storage = process.env.NODE_ENV === 'production' 
+  ? new SupabaseStorage() 
+  : new MemStorage();

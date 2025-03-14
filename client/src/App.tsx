@@ -9,6 +9,7 @@ import Survey from "@/pages/survey";
 import CareerDashboard from "@/pages/CareerDashboard";
 import AdminPanel from './components/AdminPanel';
 import NavBar from './components/NavBar';
+import DbStatusIndicator from './components/DbStatusIndicator';
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function App() {
       <Router />
       <Toaster />
       <Analytics />
+      <DbStatusIndicator />
     </QueryClientProvider>
   );
 }
