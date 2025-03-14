@@ -19,8 +19,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const testApiEndpoint = async () => {
   try {
     console.log("Testing API connectivity...");
-    // Use the getApiUrl function to get the correct URL for the current environment
-    const testUrl = getApiUrl('/test');
+    // Use the updated path for the consolidated test endpoint
+    const testUrl = getApiUrl('/utils/test');
     console.log("Using API URL:", testUrl);
     
     const response = await fetch(testUrl, {
@@ -34,6 +34,19 @@ const testApiEndpoint = async () => {
     });
     
     console.log("Test response status:", response.status);
+    
+    // Check content type to avoid parsing HTML as JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error("Received non-JSON response:", text.substring(0, 100));
+      return { 
+        success: false, 
+        error: "Server returned non-JSON content (likely HTML). Check API URL configuration.",
+        contentType
+      };
+    }
+    
     if (response.ok) {
       const data = await response.json();
       console.log("Test endpoint response:", data);
@@ -44,8 +57,19 @@ const testApiEndpoint = async () => {
     }
   } catch (error) {
     console.error("Error testing API endpoint:", error);
-    // Check if this is a CORS error
+    // Check if this is a CORS error or a JSON parse error
     const isCorsError = error.message?.includes('CORS');
+    const isJsonError = error.message?.includes('JSON');
+    
+    if (isJsonError) {
+      console.error("JSON parsing error. Server likely returned HTML instead of JSON.");
+      return { 
+        success: false, 
+        error: "Received HTML instead of JSON. Check API endpoint configuration.",
+        isJsonError 
+      };
+    }
+    
     if (isCorsError) {
       console.error("This appears to be a CORS issue. Check server configuration.");
       // Try with a relative URL as fallback if we're in production

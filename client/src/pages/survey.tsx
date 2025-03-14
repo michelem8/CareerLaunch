@@ -50,7 +50,7 @@ const testCors = async () => {
   }
   
   // Test 1: Test the CORS test endpoint
-  const testUrl = getApiUrl('/cors-test');
+  const testUrl = getApiUrl('/utils/cors-test');
   console.log('Testing CORS test endpoint:', testUrl);
   
   try {
@@ -59,6 +59,18 @@ const testCors = async () => {
       mode: 'cors',
       credentials: 'include'
     });
+    
+    // Check content type to avoid parsing HTML as JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error("Received non-JSON CORS test response:", text.substring(0, 100));
+      results.corsTest = {
+        success: false,
+        error: "Server returned non-JSON content (likely HTML). Check API URL configuration."
+      };
+      return results;
+    }
     
     if (response.ok) {
       const data = await response.json();
@@ -77,10 +89,19 @@ const testCors = async () => {
     }
   } catch (error) {
     console.error('CORS test error:', error);
-    results.corsTest = {
-      success: false,
-      error: error.message
-    };
+    
+    // Check for JSON parse errors
+    if (error.message && error.message.includes('JSON')) {
+      results.corsTest = {
+        success: false,
+        error: "Received HTML instead of JSON. Check API endpoint configuration."
+      };
+    } else {
+      results.corsTest = {
+        success: false,
+        error: error.message
+      };
+    }
   }
   
   // Test 2: Get request headers
