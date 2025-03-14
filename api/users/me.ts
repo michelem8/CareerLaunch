@@ -160,6 +160,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         environment: process.env.NODE_ENV
       });
       
+      // Always ensure resumeAnalysis exists with at least empty arrays in the response
+      // This prevents client-side errors in production
+      if (!user.resumeAnalysis) {
+        console.log('No resumeAnalysis found, creating empty structure for response');
+        user.resumeAnalysis = {
+          skills: [],
+          experience: [],
+          education: [],
+          suggestedRoles: [],
+          missingSkills: [],
+          recommendations: []
+        };
+      }
+      
       res.json(user);
       console.log('==== API HANDLER END: /api/users/me ====');
     } catch (error) {

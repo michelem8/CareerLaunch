@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { RecommendationsList } from './RecommendationsList';
 import CourseRecommendations from './CourseRecommendations';
 import { generateCareerRecommendations } from '@/lib/ai-provider';
@@ -80,16 +80,29 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string | null>(null);
   
+  // Normalize user data to ensure resumeAnalysis always exists
+  const normalizedUser = useMemo(() => {
+    if (!user.resumeAnalysis) {
+      console.log('CareerDashboard - Normalized missing resumeAnalysis to empty arrays');
+      return {
+        ...user,
+        resumeAnalysis: {
+          skills: [],
+          experience: [],
+          education: [],
+          suggestedRoles: [],
+          missingSkills: [],
+          recommendations: []
+        }
+      };
+    }
+    return user;
+  }, [user]);
+  
   // Fetch AI-generated recommendations when the component mounts if we have missing skills
   useEffect(() => {
     const fetchAIRecommendations = async () => {
-      if (!user.resumeAnalysis) {
-        console.warn('Resume analysis is missing, cannot fetch AI recommendations');
-        setAiError('Resume analysis data is missing');
-        return;
-      }
-      
-      if (!user.resumeAnalysis.missingSkills || user.resumeAnalysis.missingSkills.length === 0) {
+      if (!normalizedUser.resumeAnalysis.missingSkills || normalizedUser.resumeAnalysis.missingSkills.length === 0) {
         console.warn('No missing skills found, cannot fetch AI recommendations');
         setAiError('No missing skills identified');
         return;
@@ -99,12 +112,12 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
       setAiError(null);
       
       try {
-        console.log('Fetching AI recommendations for missing skills:', user.resumeAnalysis.missingSkills);
+        console.log('Fetching AI recommendations for missing skills:', normalizedUser.resumeAnalysis.missingSkills);
         
         // Add debugging info for API URL
         console.log('AI API URL:', `${import.meta.env.VITE_API_URL || ''}/api/ai/recommendations`);
         
-        const result = await generateCareerRecommendations(user.resumeAnalysis.missingSkills);
+        const result = await generateCareerRecommendations(normalizedUser.resumeAnalysis.missingSkills);
         console.log('AI recommendations result:', result);
         
         if (result.recommendations && result.recommendations.length > 0) {
@@ -125,9 +138,9 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
         setAiError(errorMessage);
         
         // Fallback to stored recommendations in case of error
-        if (user.resumeAnalysis?.recommendations && user.resumeAnalysis.recommendations.length > 0) {
+        if (normalizedUser.resumeAnalysis?.recommendations && normalizedUser.resumeAnalysis.recommendations.length > 0) {
           console.log('Using stored recommendations as fallback');
-          setAiRecommendations(user.resumeAnalysis.recommendations);
+          setAiRecommendations(normalizedUser.resumeAnalysis.recommendations);
         }
       } finally {
         setIsLoadingAi(false);
@@ -135,13 +148,13 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
     };
     
     fetchAIRecommendations();
-  }, [user.resumeAnalysis?.missingSkills]);
+  }, [normalizedUser.resumeAnalysis?.missingSkills]);
   
   // Only use fallback data in development, never in production
-  if (!user.resumeAnalysis && !isProduction) {
+  if (!normalizedUser.resumeAnalysis && !isProduction) {
     console.warn('CareerDashboard - resumeAnalysis is missing, creating fallback data (development only)');
-    user.resumeAnalysis = {
-      skills: user.skills || [],
+    normalizedUser.resumeAnalysis = {
+      skills: normalizedUser.skills || [],
       missingSkills: [
         "Technical Leadership",
         "Team Management",
@@ -159,10 +172,10 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   }
 
   // In development: ensure all required arrays exist in resumeAnalysis
-  if (user.resumeAnalysis && !isProduction) {
-    if (!Array.isArray(user.resumeAnalysis.missingSkills)) {
+  if (normalizedUser.resumeAnalysis && !isProduction) {
+    if (!Array.isArray(normalizedUser.resumeAnalysis.missingSkills)) {
       console.warn('CareerDashboard - missingSkills is not an array, creating fallback (development only)');
-      user.resumeAnalysis.missingSkills = [
+      normalizedUser.resumeAnalysis.missingSkills = [
         "Technical Leadership",
         "Team Management", 
         "Strategic Planning",
@@ -170,9 +183,9 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
       ];
     }
     
-    if (!Array.isArray(user.resumeAnalysis.recommendations)) {
+    if (!Array.isArray(normalizedUser.resumeAnalysis.recommendations)) {
       console.warn('CareerDashboard - recommendations is not an array, creating fallback (development only)');
-      user.resumeAnalysis.recommendations = [
+      normalizedUser.resumeAnalysis.recommendations = [
         "Take a leadership course focused on technical teams",
         "Practice delegating technical tasks while maintaining oversight",
         "Develop stronger architecture and system design knowledge",
@@ -180,29 +193,29 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
       ];
     }
     
-    if (!Array.isArray(user.resumeAnalysis.suggestedRoles)) {
+    if (!Array.isArray(normalizedUser.resumeAnalysis.suggestedRoles)) {
       console.warn('CareerDashboard - suggestedRoles is not an array, creating fallback (development only)');
-      user.resumeAnalysis.suggestedRoles = ["Engineering Manager", "Technical Lead", "Product Manager"];
+      normalizedUser.resumeAnalysis.suggestedRoles = ["Engineering Manager", "Technical Lead", "Product Manager"];
     }
   }
 
-  const currentSkills = user.skills || [];
+  const currentSkills = normalizedUser.skills || [];
   // In production, use potentially empty arrays to show proper empty states
-  const suggestedRoles = user.resumeAnalysis?.suggestedRoles || [];
-  const missingSkills = user.resumeAnalysis?.missingSkills || [];
+  const suggestedRoles = normalizedUser.resumeAnalysis?.suggestedRoles || [];
+  const missingSkills = normalizedUser.resumeAnalysis?.missingSkills || [];
   
   // Use AI recommendations if available, otherwise fall back to stored recommendations
   const recommendations = aiRecommendations.length > 0 
     ? aiRecommendations 
-    : (user.resumeAnalysis?.recommendations || []);
+    : (normalizedUser.resumeAnalysis?.recommendations || []);
 
   // Add more detailed logging
   console.log('CareerDashboard - Environment:', import.meta.env.MODE);
   console.log('CareerDashboard - Is Production:', isProduction);
-  console.log('CareerDashboard - user data:', JSON.stringify(user, null, 2));
+  console.log('CareerDashboard - user data:', JSON.stringify(normalizedUser, null, 2));
   console.log('CareerDashboard - current skills:', currentSkills);
   console.log('CareerDashboard - AI recommendations:', aiRecommendations);
-  console.log('CareerDashboard - stored recommendations:', user.resumeAnalysis?.recommendations);
+  console.log('CareerDashboard - stored recommendations:', normalizedUser.resumeAnalysis?.recommendations);
   console.log('CareerDashboard - final recommendations shown:', recommendations);
   console.log('CareerDashboard - missingSkills:', missingSkills);
   console.log('CareerDashboard - suggestedRoles:', suggestedRoles);
@@ -215,14 +228,14 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <RoleCard
           title="Current Role"
-          subtitle={user.currentRole || "Not set"}
+          subtitle={normalizedUser.currentRole || "Not set"}
           skills={currentSkills}
           skillCount={currentSkills.length}
         />
         
         <RoleCard
           title="Target Role"
-          subtitle={user.targetRole || "Not set"}
+          subtitle={normalizedUser.targetRole || "Not set"}
           skills={missingSkills}
           skillCount={missingSkills.length}
         />
@@ -283,7 +296,7 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
         </div>
       </div>
       
-      {isProduction && (!user.resumeAnalysis || 
+      {isProduction && (!normalizedUser.resumeAnalysis || 
                        !recommendations.length || 
                        !missingSkills.length) && (
         <div className="mt-8 bg-blue-50 border border-blue-200 text-blue-700 px-6 py-4 rounded-lg">

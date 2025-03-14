@@ -37,6 +37,29 @@ const CareerDashboard: React.FC = () => {
           
           const data = await response.json();
           console.log('User data fetched successfully:', data);
+          
+          // Add detailed debugging for resumeAnalysis
+          console.log('resumeAnalysis check:', {
+            exists: !!data.resumeAnalysis,
+            isProduction: import.meta.env.PROD,
+            environment: import.meta.env.MODE,
+            missingSkills: data.resumeAnalysis?.missingSkills?.length || 0,
+            recommendations: data.resumeAnalysis?.recommendations?.length || 0
+          });
+          
+          // Ensure resumeAnalysis is at least an empty object with arrays
+          if (!data.resumeAnalysis) {
+            console.warn('Fixing missing resumeAnalysis in client');
+            data.resumeAnalysis = {
+              skills: [],
+              experience: [],
+              education: [],
+              suggestedRoles: [],
+              missingSkills: [],
+              recommendations: []
+            };
+          }
+          
           return data;
         } catch (err) {
           console.error(`Error in attempt ${attempts + 1}:`, err);
