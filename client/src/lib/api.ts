@@ -39,6 +39,24 @@ export const getApiUrl = (endpoint: string): string => {
     normalizedEndpoint = `/api${normalizedEndpoint}`;
   }
   
+  // Special handling for utility endpoints in production
+  // This ensures endpoints like /utils/cors-test are correctly prefixed as /api/utils/cors-test
+  if (import.meta.env.MODE === 'production') {
+    // Specifically check for utility endpoints that might need special handling
+    if (normalizedEndpoint.includes('/utils/') && !normalizedEndpoint.startsWith('/api/utils/')) {
+      normalizedEndpoint = normalizedEndpoint.replace('/utils/', '/api/utils/');
+    }
+    
+    // Also ensure cors-test endpoints have proper prefix
+    if (normalizedEndpoint.includes('/cors-test') && !normalizedEndpoint.startsWith('/api/')) {
+      if (normalizedEndpoint === '/api/cors-test') {
+        // Already properly formatted
+      } else if (normalizedEndpoint === '/cors-test') {
+        normalizedEndpoint = '/api/cors-test';
+      }
+    }
+  }
+  
   // Some endpoints are known to have issues in production - log them with more detail
   if (normalizedEndpoint.includes('/cors-test') || normalizedEndpoint.includes('/utils/')) {
     console.log(`Building URL for special endpoint: ${normalizedEndpoint}`);

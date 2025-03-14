@@ -6,7 +6,7 @@ import { SurveySteps } from "@/components/survey-steps";
 import { ResumeUpload } from "@/components/resume-upload";
 import { Progress } from "@/components/ui/progress";
 import { queryClient } from "@/lib/queryClient";
-import { getApiUrl, testApiConnectivity } from '@/lib/api';
+import { getApiUrl, testApiConnectivity, getApiBaseUrl } from '@/lib/api';
 
 // Enhanced CORS testing function with better diagnostics
 const testCors = async () => {
@@ -30,15 +30,24 @@ const testCors = async () => {
     browserInfo?: {
       userAgent: string;
       origin: string;
+      environment: string;
+      apiBaseUrl: string
     };
   }
 
   const results: TestResults = {
     browserInfo: {
       userAgent: navigator.userAgent,
-      origin: window.location.origin
+      origin: window.location.origin,
+      environment: import.meta.env.MODE,
+      apiBaseUrl: getApiBaseUrl()
     }
   };
+
+  // Log environment information for debugging
+  console.log('Environment:', import.meta.env.MODE);
+  console.log('API Base URL:', getApiBaseUrl());
+  console.log('Origin:', window.location.origin);
 
   // Test the API connectivity first
   const apiConnectivity = await testApiConnectivity();
@@ -50,12 +59,12 @@ const testCors = async () => {
     };
   }
   
-  // Try multiple CORS test endpoints
+  // Try multiple CORS test endpoints - focus on /api/ prefixed endpoints first
   const corsEndpoints = [
-    '/utils/cors-test',
-    '/cors-test',
     '/api/utils/cors-test',
-    '/api/cors-test'
+    '/api/cors-test',
+    '/utils/cors-test',
+    '/cors-test'
   ];
   
   // Try each endpoint until one works
@@ -69,7 +78,10 @@ const testCors = async () => {
       const response = await fetch(testUrl, {
         method: 'GET',
         mode: 'cors',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
       });
       
       // Check content type to avoid parsing HTML as JSON
@@ -77,6 +89,22 @@ const testCors = async () => {
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
         console.error(`Received non-JSON response from ${endpoint}:`, text.substring(0, 100));
+        
+        // Record the failure for diagnostics
+        if (!testResult) {
+          testResult = {
+            success: false,
+            status: response.status,
+            statusText: response.statusText,
+            error: `Received non-JSON response: ${text.substring(0, 50)}...`,
+            details: {
+              url: testUrl,
+              contentType,
+              endpoint
+            }
+          };
+        }
+        
         continue; // Try next endpoint
       }
       
@@ -85,13 +113,40 @@ const testCors = async () => {
         testResult = {
           success: true,
           status: response.status,
-          data
+          data,
+          details: {
+            url: testUrl,
+            endpoint
+          }
         };
         console.log(`CORS test successful with endpoint ${endpoint}:`, data);
         break; // Success, exit the loop
+      } else {
+        testResult = {
+          success: false,
+          status: response.status,
+          statusText: response.statusText,
+          error: `API returned error status: ${response.status} ${response.statusText}`,
+          details: {
+            url: testUrl,
+            endpoint
+          }
+        };
       }
     } catch (error) {
       console.warn(`Error testing CORS with endpoint ${endpoint}:`, error.message);
+      // Record the error for diagnostics
+      if (!testResult) {
+        testResult = {
+          success: false,
+          error: `Fetch error: ${error.message}`,
+          details: {
+            endpoint,
+            errorName: error.name,
+            isCORS: error.message?.includes('CORS')
+          }
+        };
+      }
       // Continue to try next endpoint
     }
   }
