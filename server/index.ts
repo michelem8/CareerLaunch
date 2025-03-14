@@ -8,6 +8,15 @@ import fs from "fs";
 import { storage } from "./storage";
 import { redirectMiddleware, corsMiddleware, preflightRedirectMiddleware, staticAssetsCorsMiddleware, allowedOrigins } from "./middleware";
 
+// Extend the Express Request type to include our custom property
+declare global {
+  namespace Express {
+    interface Request {
+      isApiRequest?: boolean;
+    }
+  }
+}
+
 // Use __dirname directly since we're using Node.js environment
 const __dirname = path.resolve();
 
@@ -27,6 +36,16 @@ if (!process.env.RAPID_API_KEY) {
 
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+
+// API route detection middleware - place this FIRST to ensure API routes are always handled correctly
+app.use((req, res, next) => {
+  // Mark API requests to ensure they're never redirected or served static content
+  if (req.originalUrl.startsWith('/api/') || req.path.startsWith('/api/')) {
+    req.isApiRequest = true;
+    console.log(`[API Request] ${req.method} ${req.originalUrl}`);
+  }
+  next();
+});
 
 // Apply middleware in the correct order
 // Apply CORS middleware first - this ensures all requests get proper CORS headers
@@ -181,7 +200,7 @@ async function initializeDefaultUser() {
     if (process.env.NODE_ENV === 'production') {
       app.use((req, res, next) => {
         // Skip redirect middleware for API routes
-        if (req.path.startsWith('/api/')) {
+        if (req.isApiRequest || req.path.startsWith('/api/')) {
           return next();
         }
         // Apply redirect middleware for non-API routes

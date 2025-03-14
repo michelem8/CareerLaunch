@@ -12,6 +12,30 @@ export async function registerRoutes(app: Express) {
   // Register skills routes with /api prefix
   app.use('/api/skills', skillsRoutes);
 
+  // Add a dedicated diagnostic endpoint for API troubleshooting
+  app.get("/api/diagnostics", (req: Request, res: Response) => {
+    res.json({
+      success: true,
+      message: "API diagnostics endpoint is working correctly",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      headers: {
+        requestOrigin: req.headers.origin,
+        requestHost: req.headers.host,
+        requestReferer: req.headers.referer,
+        responseHeaders: Object.fromEntries(
+          Object.entries(res.getHeaders())
+        )
+      },
+      request: {
+        path: req.path,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl,
+        isApiRequest: req.isApiRequest
+      }
+    });
+  });
+
   // Add a dedicated CORS test endpoint
   app.get("/api/cors-test", (req: Request, res: Response) => {
     // Set explicit CORS headers

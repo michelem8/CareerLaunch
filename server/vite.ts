@@ -52,7 +52,8 @@ export async function setupVite(app: Express, server: Server) {
     const url = req.originalUrl;
 
     // Skip API routes
-    if (url.startsWith('/api/')) {
+    if (req.isApiRequest || url.startsWith('/api/')) {
+      console.log(`[Vite] Skipping Vite for API route: ${url}`);
       return next();
     }
 
@@ -131,7 +132,7 @@ export function serveStatic(app: Express) {
   // Serve index.html for all non-API routes - using a named function to avoid linter errors
   function serveIndexHtml(req: Request, res: Response, next: NextFunction) {
     // Skip API routes - ensure this check is thorough
-    if (req.originalUrl.startsWith('/api/') || req.path.startsWith('/api/')) {
+    if (req.isApiRequest || req.originalUrl.startsWith('/api/') || req.path.startsWith('/api/')) {
       console.log(`[Static Server] Skipping static serve for API route: ${req.originalUrl}`);
       return next();
     }
