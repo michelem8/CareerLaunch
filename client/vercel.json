@@ -4,14 +4,14 @@
   "buildCommand": "npm install && npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/utils/:path*", "destination": "https://api.careerpathfinder.io/api/utils/:path*" },
-    { "source": "/api/ai/:path*", "destination": "https://api.careerpathfinder.io/api/ai/:path*" },
-    { "source": "/api/users/:path*", "destination": "https://api.careerpathfinder.io/api/users/:path*" },
-    { "source": "/api/resume/:path*", "destination": "https://api.careerpathfinder.io/api/resume/:path*" },
-    { "source": "/api/courses/:path*", "destination": "https://api.careerpathfinder.io/api/courses/:path*" },
-    { "source": "/api/survey/:path*", "destination": "https://api.careerpathfinder.io/api/survey/:path*" },
-    { "source": "/api/skills/:path*", "destination": "https://api.careerpathfinder.io/api/skills/:path*" },
-    { "source": "/api/:path*", "destination": "https://api.careerpathfinder.io/api/:path*" },
+    { "source": "/api/utils/:path*", "destination": "/index.html" },
+    { "source": "/api/ai/:path*", "destination": "/index.html" },
+    { "source": "/api/users/:path*", "destination": "/index.html" },
+    { "source": "/api/resume/:path*", "destination": "/index.html" },
+    { "source": "/api/courses/:path*", "destination": "/index.html" },
+    { "source": "/api/survey/:path*", "destination": "/index.html" },
+    { "source": "/api/skills/:path*", "destination": "/index.html" },
+    { "source": "/api/:path*", "destination": "/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

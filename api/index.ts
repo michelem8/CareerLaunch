@@ -264,34 +264,39 @@ app.use((err: any, req: any, res: any, next: any) => {
 
 // Vercel serverless handler
 export default function handler(req: VercelRequest, res: VercelResponse) {
-  console.log(`Starting handler for ${req.method} ${req.url}`);
-  
-  // Handle CORS preflight requests
+  // Set CORS headers for all requests
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    // Set CORS headers for preflight requests
-    res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
     res.status(200).end();
     return;
   }
-  
-  // Set CORS headers for all responses
-  res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
-  try {
-    // Forward the request to Express
-    app(req as any, res as any, (err?: any) => {
-      if (err) {
-        console.error('Express error:', err);
-        res.status(500).json({ error: 'Express error' });
-      }
-    });
-  } catch (error) {
-    console.error('Handler error:', error);
-    res.status(500).json({ error: 'Handler error' });
-  }
+
+  // Return API status and all available endpoints
+  res.status(200).json({
+    status: 'API is operational',
+    message: 'Welcome to the CareerPathFinder API',
+    endpoints: {
+      test: '/api/utils/test',
+      corsTest: '/api/utils/cors-test',
+      openaiStatus: '/api/utils/openai-status',
+      health: '/api/utils/health',
+      users: '/api/users/me'
+    },
+    environment: process.env.NODE_ENV || 'unknown',
+    timestamp: new Date().toISOString(),
+    requestInfo: {
+      method: req.method,
+      url: req.url,
+      host: req.headers.host,
+      origin: req.headers.origin
+    }
+  });
 } 

@@ -13,11 +13,9 @@ export const getApiBaseUrl = (): string => {
   // Check if we're in production on the main domain
   const isProduction = import.meta.env.MODE === 'production';
   
-  // In production environment, use the current domain to avoid CORS issues
+  // In production environment, always use relative paths to avoid CORS issues
   if (isProduction) {
-    // Get the current domain (with protocol) to avoid CORS issues between www and non-www
-    const currentDomain = window.location.origin;
-    return currentDomain;
+    return '';  // Empty string for relative paths in production
   }
 
   // Development fallback
@@ -82,6 +80,22 @@ export const apiRequest = async (
       credentials: 'include',
       mode: 'cors',
     });
+    
+    // Check for HTML response (likely a routing issue)
+    if (!response.headers.get('content-type')?.includes('application/json')) {
+      // Peek at the content to see if it's HTML
+      const clone = response.clone();
+      const text = await clone.text();
+      
+      // Log error if it looks like HTML was returned
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        console.error('API request returned HTML instead of JSON:', {
+          url,
+          status: response.status,
+          preview: text.substring(0, 100) + '...'
+        });
+      }
+    }
     
     return response;
   } catch (error) {
