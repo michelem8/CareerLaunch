@@ -8,13 +8,19 @@ export const openai = new OpenAI({
   dangerouslyAllowBrowser: true // Only for development, API calls will go through our backend
 });
 
+console.log('AI Provider initialized with base URL:', `${import.meta.env.VITE_API_URL || ''}/api/ai`);
+
 // Helper function to generate career recommendations
 export async function generateCareerRecommendations(skills: string[]) {
   try {
+    console.log('generateCareerRecommendations called with skills:', skills);
+    
     if (!skills || skills.length === 0) {
+      console.warn('No skills provided to generateCareerRecommendations');
       return { recommendations: [] };
     }
 
+    console.log('Making OpenAI request for career recommendations');
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -33,6 +39,8 @@ Be specific, actionable, and practical in your recommendations.`
       max_tokens: 500,
     });
 
+    console.log('OpenAI response received:', response);
+
     // Process and structure the response
     const recommendations = response.choices[0]?.message?.content
       ?.split('\n')
@@ -40,10 +48,30 @@ Be specific, actionable, and practical in your recommendations.`
       .map(line => line.replace(/^\d+\.\s*/, '').trim())
       .filter(item => item.length > 0) || [];
 
+    console.log('Parsed recommendations:', recommendations);
     return { recommendations };
   } catch (error) {
     console.error('Error generating career recommendations:', error);
-    throw error;
+    
+    // Try to get more details about the error
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      
+      // Check if this is an API connection error
+      if (error.message.includes('Failed to fetch') || error.message.includes('Network Error')) {
+        console.error('Network error detected. API endpoint may be unavailable or CORS issues.');
+      }
+      
+      // Check if this is an authentication error
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        console.error('Authentication error detected. API key may be invalid or missing.');
+      }
+    }
+    
+    // Fallback to empty recommendations
+    return { recommendations: [] };
   }
 }
 

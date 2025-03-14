@@ -75,19 +75,20 @@ export const RoleCard: React.FC<{ title: string; subtitle?: string; skills: stri
 };
 
 export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
-  // Add fallback data if resumeAnalysis is missing, but only in development
   const isProduction = import.meta.env.MODE === 'production';
   const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
   
-  // In production, always try to get AI-generated recommendations
+  // Fetch AI-generated recommendations when the component mounts if we have missing skills
   useEffect(() => {
     const fetchAIRecommendations = async () => {
-      if (isProduction && user.resumeAnalysis?.missingSkills.length) {
+      if (user.resumeAnalysis?.missingSkills && user.resumeAnalysis.missingSkills.length > 0) {
         setIsLoadingAi(true);
         try {
+          console.log('Fetching AI recommendations for missing skills:', user.resumeAnalysis.missingSkills);
           const result = await generateCareerRecommendations(user.resumeAnalysis.missingSkills);
-          if (result.recommendations.length > 0) {
+          console.log('AI recommendations result:', result);
+          if (result.recommendations && result.recommendations.length > 0) {
             setAiRecommendations(result.recommendations);
           }
         } catch (error) {
@@ -95,12 +96,15 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
         } finally {
           setIsLoadingAi(false);
         }
+      } else {
+        console.log('No missing skills found, skipping AI recommendations fetch');
       }
     };
     
     fetchAIRecommendations();
-  }, [isProduction, user.resumeAnalysis?.missingSkills]);
+  }, [user.resumeAnalysis?.missingSkills]);
   
+  // Only use fallback data in development, never in production
   if (!user.resumeAnalysis && !isProduction) {
     console.warn('CareerDashboard - resumeAnalysis is missing, creating fallback data (development only)');
     user.resumeAnalysis = {
@@ -154,20 +158,21 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   const suggestedRoles = user.resumeAnalysis?.suggestedRoles || [];
   const missingSkills = user.resumeAnalysis?.missingSkills || [];
   
-  // Use AI recommendations in production if available, otherwise fall back to stored recommendations
-  const recommendations = isProduction && aiRecommendations.length > 0 
+  // Use AI recommendations if available, otherwise fall back to stored recommendations
+  const recommendations = aiRecommendations.length > 0 
     ? aiRecommendations 
     : (user.resumeAnalysis?.recommendations || []);
 
   // Add more detailed logging
+  console.log('CareerDashboard - Environment:', import.meta.env.MODE);
+  console.log('CareerDashboard - Is Production:', isProduction);
   console.log('CareerDashboard - user data:', JSON.stringify(user, null, 2));
   console.log('CareerDashboard - current skills:', currentSkills);
-  console.log('CareerDashboard - recommendations:', recommendations);
+  console.log('CareerDashboard - AI recommendations:', aiRecommendations);
+  console.log('CareerDashboard - stored recommendations:', user.resumeAnalysis?.recommendations);
+  console.log('CareerDashboard - final recommendations shown:', recommendations);
   console.log('CareerDashboard - missingSkills:', missingSkills);
   console.log('CareerDashboard - suggestedRoles:', suggestedRoles);
-  console.log('CareerDashboard - resumeAnalysis exists:', !!user.resumeAnalysis);
-  console.log('CareerDashboard - resumeAnalysis fields:', user.resumeAnalysis ? Object.keys(user.resumeAnalysis) : 'N/A');
-  console.log('CareerDashboard - Environment:', import.meta.env.MODE);
   console.log('CareerDashboard - API URL:', import.meta.env.VITE_API_URL);
 
   return (

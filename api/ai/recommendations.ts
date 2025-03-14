@@ -7,6 +7,15 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
+// Log OpenAI configuration status
+console.log('OpenAI API Key status:', process.env.OPENAI_API_KEY ? 'Present' : 'Missing');
+if (process.env.OPENAI_API_KEY) {
+  console.log('OpenAI API Key format check:', {
+    length: process.env.OPENAI_API_KEY.length,
+    startsWithSk: process.env.OPENAI_API_KEY.startsWith('sk-')
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -28,6 +37,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log('Received request for AI recommendations');
+    
     // Check if OpenAI API key is configured
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not configured');
@@ -39,8 +50,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get skills from request body
     const { skills } = req.body;
+    console.log('Request body:', req.body);
     
     if (!skills || !Array.isArray(skills) || skills.length === 0) {
+      console.error('Invalid skills data:', skills);
       return res.status(400).json({ 
         status: 'error',
         message: 'Skills array is required and must not be empty'
@@ -68,10 +81,13 @@ Be specific, actionable, and practical in your recommendations.`
       max_tokens: 500,
     });
 
+    console.log('OpenAI response received:', JSON.stringify(response.data));
+
     // Process and structure the response
     const content = response.data.choices[0]?.message?.content;
     
     if (!content) {
+      console.error('Empty content in OpenAI response');
       return res.status(500).json({
         status: 'error',
         message: 'No response received from OpenAI'
@@ -84,6 +100,8 @@ Be specific, actionable, and practical in your recommendations.`
       .filter(line => line.trim().length > 0)
       .map(line => line.replace(/^\d+\.\s*/, '').trim())
       .filter(item => item.length > 0);
+      
+    console.log('Processed recommendations:', recommendations);
 
     // Return the recommendations
     return res.status(200).json({
@@ -92,6 +110,13 @@ Be specific, actionable, and practical in your recommendations.`
     });
   } catch (error) {
     console.error('Error generating career recommendations:', error);
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     
     // Return error status
     return res.status(500).json({
