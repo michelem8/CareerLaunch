@@ -19,45 +19,74 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const testApiEndpoint = async () => {
   try {
     console.log("Testing API connectivity...");
-    // Use the direct test endpoint path with explicit /api/ prefix
-    const testUrl = getApiUrl('/api/test');
-    console.log("Using API URL:", testUrl);
     
-    const response = await fetch(testUrl, {
-      method: "GET",
-      headers: {
-        'Accept': 'application/json'
-      },
-      credentials: 'include',
-      // Explicitly set mode to cors
-      mode: 'cors'
-    });
+    // Try multiple test endpoints in sequence for better reliability
+    const testEndpoints = [
+      '/api/test',
+      '/api/utils/test',
+      '/api/diagnostics',
+      '/api/health'
+    ];
     
-    console.log("Test response status:", response.status);
-    console.log("Test response headers:", Object.fromEntries([...response.headers]));
+    console.log("Environment:", import.meta.env.MODE);
+    console.log("Current location:", window.location.href);
     
-    // Check content type to avoid parsing HTML as JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error("Received non-JSON response:", text.substring(0, 100));
-      return { 
-        success: false, 
-        error: "Server returned non-JSON content (likely HTML). Check API URL configuration.",
-        contentType,
-        url: testUrl,
-        responseStatus: response.status
-      };
+    // Try each endpoint in sequence
+    for (const endpoint of testEndpoints) {
+      try {
+        const testUrl = getApiUrl(endpoint);
+        console.log(`Trying API URL: ${testUrl}`);
+        
+        const response = await fetch(testUrl, {
+          method: "GET",
+          headers: {
+            'Accept': 'application/json'
+          },
+          credentials: 'include',
+          mode: 'cors'
+        });
+        
+        console.log(`Response from ${endpoint}:`, {
+          status: response.status,
+          headers: Object.fromEntries([...response.headers])
+        });
+        
+        // Check content type to avoid parsing HTML as JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error(`Received non-JSON response from ${endpoint}:`, text.substring(0, 100));
+          // Continue to the next endpoint
+          continue;
+        }
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`Successful response from ${endpoint}:`, data);
+          return { 
+            success: true, 
+            data,
+            endpoint,
+            url: testUrl
+          };
+        } else {
+          console.error(`Endpoint ${endpoint} failed with status:`, response.status);
+          // Continue to next endpoint
+          continue;
+        }
+      } catch (err) {
+        console.error(`Error with endpoint ${endpoint}:`, err);
+        // Continue to next endpoint
+        continue;
+      }
     }
     
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Test endpoint response:", data);
-      return { success: true, data };
-    } else {
-      console.error("Test endpoint failed with status:", response.status);
-      return { success: false, status: response.status };
-    }
+    // If we get here, all endpoints failed
+    return { 
+      success: false, 
+      error: "All API endpoints failed. The API server may be unreachable.",
+      attempted: testEndpoints
+    };
   } catch (error) {
     console.error("Error testing API endpoint:", error);
     // Check if this is a CORS error or a JSON parse error
@@ -93,6 +122,9 @@ function ApiConnectivityTest() {
     data?: any;
     status?: number;
     error?: string;
+    endpoint?: string;
+    url?: string;
+    attempted?: string[];
   }>(null);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -134,7 +166,7 @@ function ApiConnectivityTest() {
             <AlertDescription>
               {testResult.success ? (
                 <div>
-                  <p>Successfully connected to the API server.</p>
+                  <p>Successfully connected to the API server via: <code>{testResult.endpoint}</code></p>
                   {testResult.data && (
                     <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
                       {JSON.stringify(testResult.data, null, 2)}
@@ -143,15 +175,47 @@ function ApiConnectivityTest() {
                 </div>
               ) : (
                 <div>
-                  <p>Failed to connect to the API server.</p>
+                  <p className="font-bold text-red-500">Failed to connect to the API server</p>
                   {testResult.status && <p>Status: {testResult.status}</p>}
                   {testResult.error && <p>Error: {testResult.error}</p>}
-                  {testResult.error?.includes('CORS') && (
-                    <p className="text-red-500 font-bold mt-2">
-                      CORS Error Detected: The API server is not allowing requests from this domain.
-                      Try using a relative URL instead of an absolute URL.
+                  {testResult.url && <p>URL attempted: <code>{testResult.url}</code></p>}
+                  {testResult.attempted && (
+                    <p>Attempted endpoints: {testResult.attempted.map(ep => 
+                      <code key={ep} className="mx-1">{ep}</code>)}
                     </p>
                   )}
+                  {testResult.error?.includes('CORS') && (
+                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
+                      <p className="text-red-500 font-bold">
+                        CORS Error Detected: The API server is not allowing requests from this domain.
+                      </p>
+                      <p className="text-sm mt-1">
+                        This is likely a server configuration issue. Try using a dedicated API domain 
+                        or properly configuring CORS headers on your server.
+                      </p>
+                    </div>
+                  )}
+                  {testResult.error?.includes('HTML') && (
+                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
+                      <p className="text-red-500 font-bold">
+                        HTML Response Detected: The server is returning the frontend application HTML instead of JSON API data.
+                      </p>
+                      <p className="text-sm mt-1">
+                        This typically happens when your frontend server is handling all routes and not forwarding API requests to your backend.
+                        Make sure you're using the correct API URL that points to your actual API server.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="mt-4">
+                    <p className="font-semibold">Troubleshooting Tips:</p>
+                    <ul className="list-disc pl-5 text-sm mt-1 space-y-1">
+                      <li>Ensure your API server is running and accessible</li>
+                      <li>Verify that the API URL is correctly configured ({import.meta.env.VITE_API_URL || 'not set'})</li>
+                      <li>Check that CORS is properly configured on your server</li>
+                      <li>In production, consider using a separate domain for your API (e.g., api.careerpathfinder.io)</li>
+                    </ul>
+                  </div>
                 </div>
               )}
             </AlertDescription>

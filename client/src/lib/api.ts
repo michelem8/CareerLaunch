@@ -10,9 +10,11 @@ export const getApiBaseUrl = (): string => {
     return envApiUrl;
   }
 
-  // In production environment, always use relative paths to avoid CORS issues
+  // In production environment, use the deployed API URL
   if (import.meta.env.MODE === 'production') {
-    return '';  // Empty string for relative paths in production
+    // Return the absolute production API URL instead of relative path
+    // This ensures we hit the actual API server instead of the frontend host
+    return 'https://api.careerpathfinder.io';
   }
 
   // Development fallback
@@ -33,15 +35,15 @@ export const getApiUrl = (endpoint: string): string => {
   
   // Ensure all API endpoints have the /api/ prefix
   if (!normalizedEndpoint.startsWith('/api/')) {
-    // Add /api/ prefix to the endpoint, but avoid duplication for special test endpoints
-    if (normalizedEndpoint === '/utils/test' || normalizedEndpoint === '/test' || 
-        normalizedEndpoint === '/cors-test') {
-      normalizedEndpoint = `/api${normalizedEndpoint}`;
-    }
+    // Always add /api/ prefix to endpoints that don't have it
+    normalizedEndpoint = `/api${normalizedEndpoint}`;
   }
   
   // Super simple URL construction - just join the parts
-  const url = `${baseUrl}${normalizedEndpoint}`;
+  // Avoid double slashes if baseUrl ends with a slash
+  const url = baseUrl.endsWith('/') 
+    ? `${baseUrl}${normalizedEndpoint.substring(1)}`
+    : `${baseUrl}${normalizedEndpoint}`;
   
   console.log(`API URL: ${url}`);
   return url;
@@ -106,88 +108,77 @@ export const testApiConnectivity = async (): Promise<{
   details?: any;
 }> => {
   try {
-    // Use explicit /api/ prefix to ensure correct path
-    const url = getApiUrl('/api/utils/test');
-    console.log(`Testing API connectivity at: ${url}`);
+    // Try multiple test endpoints in sequence
+    const testEndpoints = [
+      '/api/test',
+      '/api/utils/test',
+      '/api/diagnostics',
+      '/api/health'
+    ];
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      },
-      credentials: 'include',
-      mode: 'cors'
-    });
+    // Add warning about the test
+    console.log('Testing API connectivity with multiple endpoints:', testEndpoints);
+    console.log('Current environment:', import.meta.env.MODE);
+    console.log('API base URL:', getApiBaseUrl());
     
-    if (response.ok) {
-      // First check the content type to avoid trying to parse HTML as JSON
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        return { 
-          success: true,
-          url,
-          details: data
-        };
-      } else {
-        const text = await response.text();
-        const isHtml = text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html');
+    // Try each endpoint until one works
+    for (const testPath of testEndpoints) {
+      try {
+        const url = getApiUrl(testPath);
+        console.log(`Trying endpoint: ${url}`);
         
-        return {
-          success: false,
-          error: isHtml ? 'Received HTML instead of JSON (wrong endpoint)' : 'Invalid content type',
-          url,
-          details: {
-            contentType,
-            preview: text.substring(0, 100) + '...',
-            isHtml
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          },
+          credentials: 'include',
+          mode: 'cors'
+        });
+
+        // Successful response - parse and return
+        if (response.ok) {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            console.log(`Successful connection to ${testPath}:`, data);
+            return { 
+              success: true,
+              url,
+              details: {
+                ...data,
+                endpoint: testPath,
+                contentType
+              }
+            };
           }
-        };
-      }
-    } else {
-      let errorDetail;
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          // Try to parse error details if they exist
-          errorDetail = await response.json();
-        } catch (e) {
-          // If parsing fails, just use the status text
-          errorDetail = response.statusText;
         }
-      } else {
-        // Probably HTML error page
-        const text = await response.text();
-        errorDetail = text.includes('<!DOCTYPE') ? 
-          'Server returned HTML instead of JSON (wrong endpoint)' : 
-          text.substring(0, 100);
-      }
-      
-      return { 
-        success: false,
-        error: `API responded with status: ${response.status}`,
-        url,
-        details: {
+        
+        // If we got here, either response wasn't OK or content type wasn't JSON
+        console.log(`Endpoint ${testPath} failed:`, {
           status: response.status,
-          statusText: response.statusText,
-          redirected: response.redirected,
-          url: response.url,
-          contentType,
-          errorDetail
-        }
-      };
+          contentType: response.headers.get('content-type')
+        });
+      } catch (endpointError) {
+        console.error(`Error with endpoint ${testPath}:`, endpointError.message);
+        // Continue to next endpoint
+      }
     }
+    
+    // If we get here, all endpoints failed
+    throw new Error("All API test endpoints failed");
+    
   } catch (error) {
     console.error("API connectivity test failed:", error.message);
     return {
       success: false,
       error: error.message,
-      url: getApiUrl('/utils/test'),
       details: {
         name: error.name,
         stack: error.stack,
-        isCORS: error.message?.includes('CORS')
+        isCORS: error.message?.includes('CORS'),
+        environment: import.meta.env.MODE,
+        apiBaseUrl: getApiBaseUrl()
       }
     };
   }
