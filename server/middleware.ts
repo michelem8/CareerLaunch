@@ -10,7 +10,7 @@ export const allowedOrigins = process.env.NODE_ENV === 'production'
   : ['http://localhost:5173']; // Vite's default development port
 
 // Middleware to handle www vs non-www redirects
-export function redirectMiddleware(req: Request, res: Response, next: NextFunction) {
+export function redirectMiddleware(req: Request, res: Response, next: NextFunction): void {
   const host = req.headers.host || '';
   
   // Standardize on www version
@@ -26,13 +26,14 @@ export function redirectMiddleware(req: Request, res: Response, next: NextFuncti
     }
     
     // 301 redirect to www version
-    return res.redirect(301, `https://www.careerpathfinder.io${req.url}`);
+    res.redirect(301, `https://www.careerpathfinder.io${req.url}`);
+    return;
   }
   next();
 }
 
 // CORS middleware with improved handling
-export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
+export function corsMiddleware(req: Request, res: Response, next: NextFunction): void {
   const origin = req.headers.origin;
   
   // Handle preflight requests
@@ -45,7 +46,8 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
     res.header('Access-Control-Max-Age', '86400'); // 24 hours
     
     // Respond with 204 No Content for OPTIONS requests
-    return res.status(204).end();
+    res.status(204).end();
+    return;
   }
   
   // For non-OPTIONS requests, set standard CORS headers
@@ -66,7 +68,7 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
 }
 
 // Middleware to ensure no unnecessary redirects for preflight requests
-export function preflightRedirectMiddleware(req: Request, res: Response, next: NextFunction) {
+export function preflightRedirectMiddleware(req: Request, res: Response, next: NextFunction): void {
   // Skip redirects for OPTIONS requests to prevent CORS preflight issues
   if (req.method === 'OPTIONS') {
     // Set proper CORS headers directly
@@ -84,14 +86,15 @@ export function preflightRedirectMiddleware(req: Request, res: Response, next: N
     res.header('Access-Control-Allow-Credentials', 'true');
     
     // Respond immediately with 204 No Content
-    return res.status(204).end();
+    res.status(204).end();
+    return;
   }
   
   next();
 }
 
 // Middleware for static assets CORS
-export function staticAssetsCorsMiddleware(req: Request, res: Response, next: NextFunction) {
+export function staticAssetsCorsMiddleware(req: Request, res: Response, next: NextFunction): void {
   // Apply CORS headers for all static assets
   if (req.path.startsWith('/assets/') || req.path === '/favicon.ico') {
     const origin = req.headers.origin;

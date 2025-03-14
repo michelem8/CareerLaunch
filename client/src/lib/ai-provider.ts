@@ -1,11 +1,24 @@
 import OpenAI from 'openai';
 
+// Get the API URL from environment, with fallback
+const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+const apiUrl = `${apiBaseUrl}/api/ai`;
+
+console.log('AI Provider initializing with:', {
+  baseURL: apiUrl,
+  environment: import.meta.env.MODE,
+  isDevelopment: import.meta.env.MODE === 'development',
+  hasApiUrl: !!apiBaseUrl
+});
+
 // Initialize the OpenAI provider with our API key
-// In production, this will use the server-side API key
+// In production, this will use the server-side key
 export const openai = new OpenAI({
   apiKey: 'placeholder', // Will be replaced by server-side key
-  baseURL: `${import.meta.env.VITE_API_URL || ''}/api/ai`,  // Path to our API route
-  dangerouslyAllowBrowser: true // Only for development, API calls will go through our backend
+  baseURL: apiUrl,  // Path to our API route
+  dangerouslyAllowBrowser: true, // Only for development, API calls will go through our backend
+  defaultQuery: { timestamp: Date.now().toString() }, // Add a timestamp to prevent caching
+  defaultHeaders: { 'X-Client-Source': 'browser' } // Add header for debugging
 });
 
 console.log('AI Provider initialized with base URL:', `${import.meta.env.VITE_API_URL || ''}/api/ai`);
@@ -20,34 +33,31 @@ export async function generateCareerRecommendations(skills: string[]) {
       return { recommendations: [] };
     }
 
-    console.log('Making OpenAI request for career recommendations');
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a career development expert specializing in career recommendations.
-Your task is to generate personalized career development advice based on the user's missing skills.
-Be specific, actionable, and practical in your recommendations.`
-        },
-        {
-          role: 'user',
-          content: `Based on my skill gaps in: ${skills.join(', ')}, what specific career development actions should I take?`
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 500,
+    // Use direct fetch API for more control and debugging
+    const endpoint = `${apiUrl}/recommendations`;
+    console.log('Making career recommendations request to:', endpoint);
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ skills }),
     });
-
-    console.log('OpenAI response received:', response);
-
+    
+    if (!response.ok) {
+      console.error('OpenAI API returned error status:', response.status);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('Raw API response:', data);
+    
     // Process and structure the response
-    const recommendations = response.choices[0]?.message?.content
-      ?.split('\n')
-      .filter(line => line.trim().length > 0)
-      .map(line => line.replace(/^\d+\.\s*/, '').trim())
-      .filter(item => item.length > 0) || [];
-
+    const recommendations = data.recommendations || [];
+    
     console.log('Parsed recommendations:', recommendations);
     return { recommendations };
   } catch (error) {

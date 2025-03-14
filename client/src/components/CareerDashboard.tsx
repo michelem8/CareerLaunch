@@ -78,26 +78,59 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   const isProduction = import.meta.env.MODE === 'production';
   const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   
   // Fetch AI-generated recommendations when the component mounts if we have missing skills
   useEffect(() => {
     const fetchAIRecommendations = async () => {
-      if (user.resumeAnalysis?.missingSkills && user.resumeAnalysis.missingSkills.length > 0) {
-        setIsLoadingAi(true);
-        try {
-          console.log('Fetching AI recommendations for missing skills:', user.resumeAnalysis.missingSkills);
-          const result = await generateCareerRecommendations(user.resumeAnalysis.missingSkills);
-          console.log('AI recommendations result:', result);
-          if (result.recommendations && result.recommendations.length > 0) {
-            setAiRecommendations(result.recommendations);
-          }
-        } catch (error) {
-          console.error('Error getting AI recommendations:', error);
-        } finally {
-          setIsLoadingAi(false);
+      if (!user.resumeAnalysis) {
+        console.warn('Resume analysis is missing, cannot fetch AI recommendations');
+        setAiError('Resume analysis data is missing');
+        return;
+      }
+      
+      if (!user.resumeAnalysis.missingSkills || user.resumeAnalysis.missingSkills.length === 0) {
+        console.warn('No missing skills found, cannot fetch AI recommendations');
+        setAiError('No missing skills identified');
+        return;
+      }
+      
+      setIsLoadingAi(true);
+      setAiError(null);
+      
+      try {
+        console.log('Fetching AI recommendations for missing skills:', user.resumeAnalysis.missingSkills);
+        
+        // Add debugging info for API URL
+        console.log('AI API URL:', `${import.meta.env.VITE_API_URL || ''}/api/ai/recommendations`);
+        
+        const result = await generateCareerRecommendations(user.resumeAnalysis.missingSkills);
+        console.log('AI recommendations result:', result);
+        
+        if (result.recommendations && result.recommendations.length > 0) {
+          setAiRecommendations(result.recommendations);
+        } else {
+          console.warn('Received empty recommendations from AI API');
+          setAiError('Received empty recommendations from AI');
         }
-      } else {
-        console.log('No missing skills found, skipping AI recommendations fetch');
+      } catch (error) {
+        console.error('Error getting AI recommendations:', error);
+        let errorMessage = 'Failed to get AI recommendations';
+        
+        if (error instanceof Error) {
+          errorMessage = `${errorMessage}: ${error.message}`;
+          console.error('Error details:', error.stack);
+        }
+        
+        setAiError(errorMessage);
+        
+        // Fallback to stored recommendations in case of error
+        if (user.resumeAnalysis?.recommendations && user.resumeAnalysis.recommendations.length > 0) {
+          console.log('Using stored recommendations as fallback');
+          setAiRecommendations(user.resumeAnalysis.recommendations);
+        }
+      } finally {
+        setIsLoadingAi(false);
       }
     };
     
@@ -216,6 +249,13 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
             <div className="flex flex-col items-center justify-center h-48">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
               <p className="text-gray-600">Generating personalized AI recommendations...</p>
+            </div>
+          ) : aiError && !recommendations.length ? (
+            <div className="text-red-500">
+              <p>Could not load AI recommendations: {aiError}</p>
+              <p className="mt-2 text-gray-600">
+                Please make sure you have completed your career profile with current skills and target role.
+              </p>
             </div>
           ) : recommendations.length > 0 ? (
             <RecommendationsList recommendations={recommendations} />
