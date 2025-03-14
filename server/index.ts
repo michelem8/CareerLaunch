@@ -58,7 +58,23 @@ app.use((req, res, next) => {
 });
 
 // Apply middleware in the correct order
-// Apply CORS middleware first - this ensures all requests get proper CORS headers
+// CORS setup - we're adding this first to ensure it's applied to all requests
+// Handle OPTIONS preflight requests globally
+app.options('*', (req: Request, res: Response) => {
+  console.log('Global OPTIONS handler for:', req.originalUrl);
+  
+  // Set explicit CORS headers for all OPTIONS requests
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept, X-CSRF-Token, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  
+  // End OPTIONS requests immediately
+  res.status(204).end();
+});
+
+// Apply CORS middleware - this ensures all requests get proper CORS headers
 app.use(corsMiddleware);
 
 // Apply preflight redirect middleware early to handle OPTIONS requests correctly

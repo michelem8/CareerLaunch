@@ -31,18 +31,15 @@ export const getApiBaseUrl = (): string => {
 export const getApiUrl = (endpoint: string): string => {
   const baseUrl = getApiBaseUrl();
   
-  // Make sure endpoint starts with /api/
+  // Make sure endpoint starts with /api/ for all endpoints
   let normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Special case for test endpoints which might be nested differently on the server
-  if (normalizedEndpoint === '/utils/test' || normalizedEndpoint === '/api/utils/test') {
-    normalizedEndpoint = '/api/test'; // Use the direct /api/test endpoint 
-  } else if (normalizedEndpoint === '/utils/cors-test' || normalizedEndpoint === '/api/utils/cors-test') {
-    normalizedEndpoint = '/api/cors-test'; // Use the direct /api/cors-test endpoint
-  } else if (!normalizedEndpoint.startsWith('/api/')) {
-    // Ensure all API endpoints start with /api/
+  // Simplify the logic - ensure all endpoints start with /api/
+  if (!normalizedEndpoint.startsWith('/api/')) {
     normalizedEndpoint = `/api${normalizedEndpoint}`;
   }
+  
+  // No need for special cases, as we've consolidated all our endpoints under /api
   
   // If we're using a full domain (not empty string), make sure we don't duplicate /api
   if (baseUrl && normalizedEndpoint.startsWith('/api/') && baseUrl.endsWith('/api')) {

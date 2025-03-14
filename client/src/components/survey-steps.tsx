@@ -19,8 +19,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const testApiEndpoint = async () => {
   try {
     console.log("Testing API connectivity...");
-    // Use the updated path for the consolidated test endpoint
-    const testUrl = getApiUrl('/utils/test');
+    // Use the direct test endpoint path
+    const testUrl = getApiUrl('/api/test');
     console.log("Using API URL:", testUrl);
     
     const response = await fetch(testUrl, {
@@ -34,6 +34,7 @@ const testApiEndpoint = async () => {
     });
     
     console.log("Test response status:", response.status);
+    console.log("Test response headers:", Object.fromEntries([...response.headers]));
     
     // Check content type to avoid parsing HTML as JSON
     const contentType = response.headers.get('content-type');
@@ -43,7 +44,9 @@ const testApiEndpoint = async () => {
       return { 
         success: false, 
         error: "Server returned non-JSON content (likely HTML). Check API URL configuration.",
-        contentType
+        contentType,
+        url: testUrl,
+        responseStatus: response.status
       };
     }
     
@@ -282,7 +285,21 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
         console.log("Environment:", import.meta.env.MODE);
         console.log("Current URL:", window.location.href);
         
-        const response = await apiRequest("POST", "/api/survey/roles", data);
+        // Use direct fetch instead of apiRequest for more control
+        const url = getApiUrl('/api/survey/roles');
+        console.log("Using direct URL for roles:", url);
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data),
+          credentials: 'include',
+          mode: 'cors'
+        });
+        
         console.log("Response status:", response.status);
         console.log("Response headers:", Object.fromEntries([...response.headers]));
         
@@ -295,6 +312,7 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
           try {
             errorJson = JSON.parse(errorText);
             // Handle structured error responses
+            console.error("Server error response:", errorJson);
             if (errorJson.error && typeof errorJson.error === 'object') {
               throw new Error(JSON.stringify(errorJson));
             } else {
@@ -302,30 +320,33 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
             }
           } catch (parseError) {
             // If we can't parse the JSON, use the raw text or status code
+            console.error("Error parsing error response:", parseError);
+            console.error("Raw error response:", errorText);
+            
+            if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
+              throw new Error("Server returned HTML instead of JSON. This is likely a routing or CORS issue.");
+            }
+            
             throw new Error(errorText || `Server error: ${response.status}`);
           }
         }
         
-        // Process successful response
-        let responseText = await response.text();
-        
-        // Handle empty response
-        if (!responseText || responseText.trim() === '') {
-          throw new Error("Server returned empty response");
-        }
-        
-        let responseData;
-        try {
-          responseData = JSON.parse(responseText);
-        } catch (e) {
-          console.error("Failed to parse response as JSON:", e);
-          // Provide more specific error message for debugging
-          if (responseText.includes("<!DOCTYPE html>")) {
-            throw new Error("Server returned HTML instead of JSON (likely a routing issue)");
-          } else {
-            throw new Error("Server returned invalid JSON: " + responseText.substring(0, 100) + "...");
+        // Check content type before attempting to parse
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error("Received non-JSON response:", text.substring(0, 150));
+          
+          if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+            throw new Error("Server returned HTML instead of JSON. This is likely a routing or CORS issue.");
           }
+          
+          throw new Error(`Server returned non-JSON content type: ${contentType}`);
         }
+        
+        // Process successful response
+        const responseData = await response.json();
+        console.log("Successfully parsed response:", responseData);
         
         return responseData;
       } catch (error) {

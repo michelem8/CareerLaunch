@@ -158,6 +158,22 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Add explicit OPTIONS handlers for key endpoints that might be failing
+  app.options("/api/survey/roles", (req: Request, res: Response) => {
+    console.log("OPTIONS request for /api/survey/roles:", req.headers);
+    
+    // Set very explicit CORS headers
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept, X-CSRF-Token, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    
+    // End the request successfully
+    res.status(204).end();
+  });
+
   app.post("/api/survey/roles", async (req, res) => {
     try {
       console.log("Received roles data:", req.body);
@@ -169,36 +185,50 @@ export async function registerRoutes(app: Express) {
       
       // Add validation for missing body
       if (!req.body) {
+        console.error("Missing request body in /api/survey/roles");
         return res.status(400).json({ error: "Missing request body" });
       }
       
+      console.log("Request body type:", typeof req.body, "Content:", JSON.stringify(req.body, null, 2));
+      
       // Validate required fields before schema validation
       if (typeof req.body.currentRole !== 'string' || typeof req.body.targetRole !== 'string') {
+        console.error("Invalid request format in /api/survey/roles:", req.body);
         return res.status(400).json({ 
           error: "Invalid request format", 
           details: "Both currentRole and targetRole must be strings" 
         });
       }
       
-      const { currentRole, targetRole } = rolesSchema.parse(req.body);
-
-      const userId = 1; // In a real app, get from session
-
-      // Get current user data
-      let user = await storage.getUser(userId);
-      if (!user) {
-        user = await storage.createUser({
-          username: "demo_user",
-          password: "demo_password"
+      try {
+        const { currentRole, targetRole } = rolesSchema.parse(req.body);
+        console.log("Validated roles data:", { currentRole, targetRole });
+      
+        const userId = 1; // In a real app, get from session
+  
+        // Get current user data
+        let user = await storage.getUser(userId);
+        if (!user) {
+          console.log("Creating new user for roles update");
+          user = await storage.createUser({
+            username: "demo_user",
+            password: "demo_password"
+          });
+        }
+  
+        // Update just the roles
+        const updated = await storage.updateUserRoles(userId, currentRole, targetRole);
+        console.log("Updated user with roles:", updated);
+        
+        // Ensure we're sending a valid JSON response
+        return res.status(200).json(updated);
+      } catch (validationError) {
+        console.error("Validation error in /api/survey/roles:", validationError);
+        return res.status(400).json({
+          error: "Validation error",
+          details: validationError instanceof Error ? validationError.message : "Invalid data format"
         });
       }
-
-      // Update just the roles
-      const updated = await storage.updateUserRoles(userId, currentRole, targetRole);
-      console.log("Updated user with roles:", updated);
-      
-      // Ensure we're sending a valid JSON response
-      return res.status(200).json(updated);
     } catch (error) {
       console.error("Roles update error:", error);
       
@@ -469,6 +499,34 @@ export async function registerRoutes(app: Express) {
         path: req.path,
         method: req.method
       }
+    });
+  });
+
+  // Add a test-only endpoint for survey roles as a fallback
+  app.post('/api/test/survey/roles', (req, res) => {
+    console.log('TEST ENDPOINT: Received roles data in test endpoint:', req.body);
+    
+    // Set content type to ensure JSON response
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Basic validation
+    if (!req.body || typeof req.body.currentRole !== 'string' || typeof req.body.targetRole !== 'string') {
+      return res.status(400).json({ 
+        error: "Invalid request format", 
+        details: "Both currentRole and targetRole must be strings"
+      });
+    }
+    
+    // Return mock data
+    return res.status(200).json({
+      id: 1,
+      username: "demo_user",
+      currentRole: req.body.currentRole,
+      targetRole: req.body.targetRole,
+      updatedAt: new Date().toISOString(),
+      message: "TEST ENDPOINT: Roles saved successfully"
     });
   });
 

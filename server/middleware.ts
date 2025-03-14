@@ -64,6 +64,16 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction):
     }
   }
   
+  // For API requests, always ensure appropriate content type header
+  if (req.path.startsWith('/api/') || 
+      req.originalUrl.startsWith('/api/') || 
+      req.url.startsWith('/api/') || 
+      req.path === '/test' || 
+      req.path === '/cors-test') {
+    // Ensure JSON content type for API responses
+    res.header('Content-Type', 'application/json');
+  }
+  
   next();
 }
 
