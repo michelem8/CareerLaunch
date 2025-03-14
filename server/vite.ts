@@ -51,9 +51,12 @@ export async function setupVite(app: Express, server: Server) {
   app.use("*", async (req: Request, res: Response, next: NextFunction) => {
     const url = req.originalUrl;
 
-    // Skip API routes
-    if (req.isApiRequest || url.startsWith('/api/')) {
-      console.log(`[Vite] Skipping Vite for API route: ${url}`);
+    // Enhanced API detection
+    if (req.isApiRequest || 
+        url.startsWith('/api/') || 
+        req.path.startsWith('/api/') ||
+        url.includes('/api/')) {
+      console.log(`[Vite] Skipping Vite for API route: ${url} (Path: ${req.path})`);
       return next();
     }
 

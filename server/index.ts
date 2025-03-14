@@ -40,9 +40,19 @@ const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 // API route detection middleware - place this FIRST to ensure API routes are always handled correctly
 app.use((req, res, next) => {
   // Mark API requests to ensure they're never redirected or served static content
-  if (req.originalUrl.startsWith('/api/') || req.path.startsWith('/api/')) {
+  if (req.originalUrl.startsWith('/api/') || 
+      req.path.startsWith('/api/') || 
+      req.url.startsWith('/api/') ||
+      // Handle test endpoints specifically
+      req.path === '/test' ||
+      req.path === '/cors-test') {
     req.isApiRequest = true;
-    console.log(`[API Request] ${req.method} ${req.originalUrl}`);
+    
+    // Ensure all API responses have proper JSON content type
+    res.setHeader('Content-Type', 'application/json');
+    
+    // Log API requests with more detail for debugging
+    console.log(`[API Request] ${req.method} ${req.originalUrl} (Path: ${req.path}, URL: ${req.url})`);
   }
   next();
 });

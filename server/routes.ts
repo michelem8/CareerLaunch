@@ -12,6 +12,43 @@ export async function registerRoutes(app: Express) {
   // Register skills routes with /api prefix
   app.use('/api/skills', skillsRoutes);
 
+  // Add dedicated API test endpoints at multiple potential paths for reliability
+  app.get(["/api/test", "/test", "/api/utils/test"], (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    res.json({
+      success: true,
+      message: "API test endpoint is working",
+      timestamp: new Date().toISOString(),
+      path: req.path,
+      originalUrl: req.originalUrl,
+      isApiRequest: req.isApiRequest
+    });
+  });
+
+  // Add dedicated CORS test endpoints at multiple potential paths for reliability
+  app.get(["/api/cors-test", "/cors-test", "/api/utils/cors-test"], (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    res.json({
+      success: true,
+      message: "CORS test successful",
+      timestamp: new Date().toISOString(),
+      headers: {
+        origin: req.headers.origin || 'none',
+        host: req.headers.host,
+        referer: req.headers.referer
+      },
+      path: req.path,
+      originalUrl: req.originalUrl,
+      isApiRequest: req.isApiRequest
+    });
+  });
+
   // Add a dedicated diagnostic endpoint for API troubleshooting
   app.get("/api/diagnostics", (req: Request, res: Response) => {
     res.json({
@@ -32,23 +69,6 @@ export async function registerRoutes(app: Express) {
         originalUrl: req.originalUrl,
         baseUrl: req.baseUrl,
         isApiRequest: req.isApiRequest
-      }
-    });
-  });
-
-  // Add a dedicated CORS test endpoint
-  app.get("/api/cors-test", (req: Request, res: Response) => {
-    // Set explicit CORS headers
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    
-    res.json({
-      message: 'CORS test successful',
-      timestamp: new Date().toISOString(),
-      headers: {
-        origin: req.headers.origin || 'none',
-        host: req.headers.host,
-        referer: req.headers.referer
       }
     });
   });
@@ -142,6 +162,11 @@ export async function registerRoutes(app: Express) {
     try {
       console.log("Received roles data:", req.body);
       
+      // Set content type to ensure JSON response
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      
       // Add validation for missing body
       if (!req.body) {
         return res.status(400).json({ error: "Missing request body" });
@@ -188,7 +213,8 @@ export async function registerRoutes(app: Express) {
         errorMessage = JSON.stringify(error);
       }
       
-      // Make sure we're sending a complete, valid JSON response
+      // Make sure we're sending a complete, valid JSON response with proper headers
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         error: errorMessage,
         details: errorDetails

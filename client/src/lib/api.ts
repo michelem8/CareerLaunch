@@ -34,14 +34,13 @@ export const getApiUrl = (endpoint: string): string => {
   // Make sure endpoint starts with /api/
   let normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Special case for test endpoints which are now consolidated under utils
-  if (normalizedEndpoint === '/api/test' || normalizedEndpoint === '/test') {
-    normalizedEndpoint = '/api/utils/test';
-  } else if (normalizedEndpoint === '/api/cors-test' || normalizedEndpoint === '/cors-test') {
-    normalizedEndpoint = '/api/utils/cors-test';
-  } else if (normalizedEndpoint === '/api/openai-status' || normalizedEndpoint === '/openai-status') {
-    normalizedEndpoint = '/api/utils/openai-status';
-  } else if (!normalizedEndpoint.startsWith('/api/') && !normalizedEndpoint.includes('/api/')) {
+  // Special case for test endpoints which might be nested differently on the server
+  if (normalizedEndpoint === '/utils/test' || normalizedEndpoint === '/api/utils/test') {
+    normalizedEndpoint = '/api/test'; // Use the direct /api/test endpoint 
+  } else if (normalizedEndpoint === '/utils/cors-test' || normalizedEndpoint === '/api/utils/cors-test') {
+    normalizedEndpoint = '/api/cors-test'; // Use the direct /api/cors-test endpoint
+  } else if (!normalizedEndpoint.startsWith('/api/')) {
+    // Ensure all API endpoints start with /api/
     normalizedEndpoint = `/api${normalizedEndpoint}`;
   }
   
@@ -50,6 +49,7 @@ export const getApiUrl = (endpoint: string): string => {
     normalizedEndpoint = normalizedEndpoint.substring(4); // Remove the leading /api
   }
   
+  console.log(`Constructed API URL: ${baseUrl}${normalizedEndpoint} (from ${endpoint})`);
   return `${baseUrl}${normalizedEndpoint}`;
 };
 
