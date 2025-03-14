@@ -77,6 +77,34 @@ app.options('*', (req: Request, res: Response) => {
 // Apply CORS middleware - this ensures all requests get proper CORS headers
 app.use(corsMiddleware);
 
+// Add enhanced debugging middleware for survey endpoints
+app.use((req, res, next) => {
+  if (req.path.includes('/survey/') || req.originalUrl.includes('/survey/')) {
+    console.log('\n-------SURVEY ENDPOINT DEBUG-------');
+    console.log('Survey request details:');
+    console.log('- Method:', req.method);
+    console.log('- Original URL:', req.originalUrl);
+    console.log('- Path:', req.path);
+    console.log('- Base URL:', req.baseUrl);
+    console.log('- Hostname:', req.hostname);
+    console.log('- Protocol:', req.protocol);
+    console.log('- Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('- Body:', req.method !== 'OPTIONS' ? JSON.stringify(req.body, null, 2) : 'N/A (OPTIONS)');
+    
+    // Track response status for this request
+    const originalSend = res.send;
+    res.send = function(body) {
+      console.log('Survey response details:');
+      console.log('- Status:', res.statusCode);
+      console.log('- Headers:', JSON.stringify(res.getHeaders(), null, 2));
+      console.log('- Body preview:', typeof body === 'string' ? body.substring(0, 200) + '...' : '(non-string body)');
+      console.log('------END SURVEY DEBUG------\n');
+      return originalSend.call(this, body);
+    };
+  }
+  next();
+});
+
 // Apply preflight redirect middleware early to handle OPTIONS requests correctly
 app.use(preflightRedirectMiddleware);
 

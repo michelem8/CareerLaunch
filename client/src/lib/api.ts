@@ -10,11 +10,8 @@ export const getApiBaseUrl = (): string => {
     return envApiUrl;
   }
 
-  // Check if we're in production on the main domain
-  const isProduction = import.meta.env.MODE === 'production';
-  
   // In production environment, always use relative paths to avoid CORS issues
-  if (isProduction) {
+  if (import.meta.env.MODE === 'production') {
     return '';  // Empty string for relative paths in production
   }
 
@@ -31,23 +28,14 @@ export const getApiBaseUrl = (): string => {
 export const getApiUrl = (endpoint: string): string => {
   const baseUrl = getApiBaseUrl();
   
-  // Make sure endpoint starts with /api/ for all endpoints
-  let normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  // Normalize endpoint to always have a leading slash
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Simplify the logic - ensure all endpoints start with /api/
-  if (!normalizedEndpoint.startsWith('/api/')) {
-    normalizedEndpoint = `/api${normalizedEndpoint}`;
-  }
+  // Super simple URL construction - just join the parts
+  const url = `${baseUrl}${normalizedEndpoint}`;
   
-  // No need for special cases, as we've consolidated all our endpoints under /api
-  
-  // If we're using a full domain (not empty string), make sure we don't duplicate /api
-  if (baseUrl && normalizedEndpoint.startsWith('/api/') && baseUrl.endsWith('/api')) {
-    normalizedEndpoint = normalizedEndpoint.substring(4); // Remove the leading /api
-  }
-  
-  console.log(`Constructed API URL: ${baseUrl}${normalizedEndpoint} (from ${endpoint})`);
-  return `${baseUrl}${normalizedEndpoint}`;
+  console.log(`API URL: ${url}`);
+  return url;
 };
 
 /**

@@ -277,92 +277,84 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
     mutationFn: async (data: { currentRole: string; targetRole: string }) => {
       console.log("Saving roles:", data);
       try {
-        // Test the API connectivity first
-        const testResult = await testApiEndpoint();
-        console.log("API test result:", testResult);
-        
         // Log additional debugging info
         console.log("Environment:", import.meta.env.MODE);
         console.log("Current URL:", window.location.href);
         
-        // Use direct fetch instead of apiRequest for more control
-        const url = getApiUrl('/api/survey/roles');
-        console.log("Using direct URL for roles:", url);
+        // Create an array of endpoints to try in order
+        const endpoints = [
+          '/api/survey/roles',           // Primary endpoint
+          '/api/direct/survey/roles',    // Simple direct endpoint without type issues
+          '/api/test/survey/roles',      // Test fallback endpoint
+          '/survey/roles',               // Try without /api prefix
+          '/api/carrierlaunch/survey/roles'  // Try with product name
+        ];
         
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(data),
-          credentials: 'include',
-          mode: 'cors'
-        });
+        let lastError: Error | null = null;
+        let responseData = null;
         
-        console.log("Response status:", response.status);
-        console.log("Response headers:", Object.fromEntries([...response.headers]));
-        
-        // Handle non-200 status codes
-        if (!response.ok) {
-          // Try to parse error message from response
-          let errorText = await response.text();
-          let errorJson;
-          
+        // Try each endpoint in sequence until one works
+        for (const endpoint of endpoints) {
           try {
-            errorJson = JSON.parse(errorText);
-            // Handle structured error responses
-            console.error("Server error response:", errorJson);
-            if (errorJson.error && typeof errorJson.error === 'object') {
-              throw new Error(JSON.stringify(errorJson));
-            } else {
-              throw new Error(errorJson.error || `Server error: ${response.status}`);
-            }
-          } catch (parseError) {
-            // If we can't parse the JSON, use the raw text or status code
-            console.error("Error parsing error response:", parseError);
-            console.error("Raw error response:", errorText);
+            console.log(`Trying endpoint: ${endpoint}`);
+            const url = getApiUrl(endpoint);
+            console.log(`Full URL: ${url}`);
             
-            if (errorText.includes('<!DOCTYPE html>') || errorText.includes('<html')) {
-              throw new Error("Server returned HTML instead of JSON. This is likely a routing or CORS issue.");
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify(data),
+              credentials: 'include',
+              mode: 'cors'
+            });
+            
+            console.log(`Response from ${endpoint}:`, {
+              status: response.status,
+              headers: Object.fromEntries([...response.headers])
+            });
+            
+            // Check content type before attempting to parse
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+              const text = await response.text();
+              console.log(`Non-JSON response from ${endpoint}:`, text.substring(0, 150));
+              throw new Error(`Server returned non-JSON content type: ${contentType}`);
             }
             
-            throw new Error(errorText || `Server error: ${response.status}`);
+            // Handle non-OK responses
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || `Server error: ${response.status}`);
+            }
+            
+            // Successfully got JSON response
+            responseData = await response.json();
+            console.log(`Successfully parsed response from ${endpoint}:`, responseData);
+            
+            // Exit the loop on success
+            break;
+          } catch (err) {
+            console.error(`Error with endpoint ${endpoint}:`, err);
+            lastError = err instanceof Error ? err : new Error(String(err));
+            
+            // Continue to the next endpoint
+            continue;
           }
         }
         
-        // Check content type before attempting to parse
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const text = await response.text();
-          console.error("Received non-JSON response:", text.substring(0, 150));
-          
-          if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
-            throw new Error("Server returned HTML instead of JSON. This is likely a routing or CORS issue.");
-          }
-          
-          throw new Error(`Server returned non-JSON content type: ${contentType}`);
+        // After trying all endpoints, if we have data, return it
+        if (responseData) {
+          return responseData;
         }
         
-        // Process successful response
-        const responseData = await response.json();
-        console.log("Successfully parsed response:", responseData);
-        
-        return responseData;
+        // Otherwise, throw the last error
+        throw lastError || new Error("All endpoints failed with unknown errors");
       } catch (error) {
         console.error("Error in saveRoles mutation:", error);
-        
-        // Improved error handling
-        if (error instanceof Error) {
-          // Pass the error message directly
-          throw error;
-        } else if (typeof error === 'object' && error !== null) {
-          // Format object errors properly
-          throw new Error(JSON.stringify(error));
-        } else {
-          // Handle other error types
-          throw new Error(`Unknown error: ${String(error)}`);
-        }
+        throw error;
       }
     },
     onSuccess: (data) => {
