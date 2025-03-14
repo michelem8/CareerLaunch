@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const testApiEndpoint = async () => {
   try {
     console.log("Testing API connectivity...");
-    // Use the direct test endpoint path
+    // Use the direct test endpoint path with explicit /api/ prefix
     const testUrl = getApiUrl('/api/test');
     console.log("Using API URL:", testUrl);
     
@@ -286,8 +286,8 @@ export function SurveySteps({ onComplete, onStepChange }: SurveyStepsProps) {
           '/api/survey/roles',           // Primary endpoint
           '/api/direct/survey/roles',    // Simple direct endpoint without type issues
           '/api/test/survey/roles',      // Test fallback endpoint
-          '/survey/roles',               // Try without /api prefix
-          '/api/carrierlaunch/survey/roles'  // Try with product name
+          '/api/v1/survey/roles',        // Try with version prefix
+          '/api/career/survey/roles'     // Try with career prefix
         ];
         
         let lastError: Error | null = null;

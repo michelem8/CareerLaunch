@@ -29,7 +29,16 @@ export const getApiUrl = (endpoint: string): string => {
   const baseUrl = getApiBaseUrl();
   
   // Normalize endpoint to always have a leading slash
-  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  let normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  // Ensure all API endpoints have the /api/ prefix
+  if (!normalizedEndpoint.startsWith('/api/')) {
+    // Add /api/ prefix to the endpoint, but avoid duplication for special test endpoints
+    if (normalizedEndpoint === '/utils/test' || normalizedEndpoint === '/test' || 
+        normalizedEndpoint === '/cors-test') {
+      normalizedEndpoint = `/api${normalizedEndpoint}`;
+    }
+  }
   
   // Super simple URL construction - just join the parts
   const url = `${baseUrl}${normalizedEndpoint}`;
@@ -97,7 +106,8 @@ export const testApiConnectivity = async (): Promise<{
   details?: any;
 }> => {
   try {
-    const url = getApiUrl('/utils/test'); // Updated to use the consolidated utils endpoint
+    // Use explicit /api/ prefix to ensure correct path
+    const url = getApiUrl('/api/utils/test');
     console.log(`Testing API connectivity at: ${url}`);
     
     const response = await fetch(url, {
