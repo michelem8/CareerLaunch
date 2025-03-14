@@ -39,7 +39,7 @@ describe('CORS Utils Endpoints Tests', () => {
   test('should handle GET to /api/utils/cors-test with proper JSON response', async () => {
     const response = await request(app)
       .get('/api/utils/cors-test')
-      .set('Origin', 'https://careerpathfinder.io');
+      .set('Origin', 'https://www.careerpathfinder.io');
     
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toContain('application/json');
@@ -50,11 +50,11 @@ describe('CORS Utils Endpoints Tests', () => {
   test('should handle OPTIONS to /api/utils/cors-test with proper CORS headers', async () => {
     const response = await request(app)
       .options('/api/utils/cors-test')
-      .set('Origin', 'https://careerpathfinder.io')
+      .set('Origin', 'https://www.careerpathfinder.io')
       .set('Access-Control-Request-Method', 'GET');
     
     expect(response.status).toBe(204);
-    expect(response.headers['access-control-allow-origin']).toBe('https://careerpathfinder.io');
+    expect(response.headers['access-control-allow-origin']).toBe('https://www.careerpathfinder.io');
     expect(response.headers['access-control-allow-credentials']).toBe('true');
     expect(response.headers['access-control-allow-methods']).toBeTruthy();
   });

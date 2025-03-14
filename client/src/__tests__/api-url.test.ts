@@ -6,8 +6,8 @@ describe('API URL Construction', () => {
     // Mock window.location
     Object.defineProperty(window, 'location', {
       value: {
-        origin: 'https://careerpathfinder.io',
-        hostname: 'careerpathfinder.io'
+        origin: 'https://www.careerpathfinder.io',
+        hostname: 'www.careerpathfinder.io'
       },
       writable: true
     });
@@ -31,7 +31,7 @@ describe('API URL Construction', () => {
   
   it('should use window.location.origin in production', () => {
     const baseUrl = getApiBaseUrl();
-    expect(baseUrl).toBe('https://careerpathfinder.io');
+    expect(baseUrl).toBe('https://www.careerpathfinder.io');
   });
   
   it('should respect VITE_API_URL if provided', () => {
@@ -49,11 +49,11 @@ describe('API URL Construction', () => {
   it('should properly format utility endpoints', () => {
     // Test the CORS test endpoint specifically
     const corsTestUrl = getApiUrl('/utils/cors-test');
-    expect(corsTestUrl).toBe('https://careerpathfinder.io/api/utils/cors-test');
+    expect(corsTestUrl).toBe('https://www.careerpathfinder.io/api/utils/cors-test');
     
     // Test with the /api prefix already included
     const apiCorsTestUrl = getApiUrl('/api/utils/cors-test');
-    expect(apiCorsTestUrl).toBe('https://careerpathfinder.io/api/utils/cors-test');
+    expect(apiCorsTestUrl).toBe('https://www.careerpathfinder.io/api/utils/cors-test');
   });
   
   it('should log extra debugging for utility endpoints', () => {

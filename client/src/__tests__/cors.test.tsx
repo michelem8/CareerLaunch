@@ -12,7 +12,7 @@ describe('CORS handling', () => {
     // Reset window.location.origin for tests
     Object.defineProperty(window, 'location', {
       value: {
-        origin: 'https://careerpathfinder.io'
+        origin: 'https://www.careerpathfinder.io'
       },
       writable: true
     });
@@ -83,10 +83,10 @@ describe('CORS handling', () => {
   });
 
   it('should work with multiple origin formats', async () => {
-    // Legacy test with WWW subdomain (for backwards compatibility during transition)
+    // Legacy test with non-www subdomain (for backwards compatibility during transition)
     Object.defineProperty(window, 'location', {
       value: {
-        origin: 'https://www.careerpathfinder.io'
+        origin: 'https://careerpathfinder.io'
       },
       writable: true
     });

@@ -56,18 +56,18 @@ describe('API Utils', () => {
       expect(getApiBaseUrl()).toBe('https://api.example.com');
     });
     
-    it('should use empty string for production on careerpathfinder.io', () => {
-      import.meta.env.MODE = 'production';
-      import.meta.env.VITE_API_URL = undefined;
-      global.window.location = { hostname: 'careerpathfinder.io' } as Location;
-      expect(getApiBaseUrl()).toBe('');
-    });
-    
-    // Also support legacy www subdomain during transition
-    it('should use empty string for production on www.careerpathfinder.io (legacy)', () => {
+    it('should use empty string for production on www.careerpathfinder.io', () => {
       import.meta.env.MODE = 'production';
       import.meta.env.VITE_API_URL = undefined;
       global.window.location = { hostname: 'www.careerpathfinder.io' } as Location;
+      expect(getApiBaseUrl()).toBe('');
+    });
+    
+    // Also support non-www subdomain during transition
+    it('should use empty string for production on careerpathfinder.io (legacy)', () => {
+      import.meta.env.MODE = 'production';
+      import.meta.env.VITE_API_URL = undefined;
+      global.window.location = { hostname: 'careerpathfinder.io' } as Location;
       expect(getApiBaseUrl()).toBe('');
     });
     

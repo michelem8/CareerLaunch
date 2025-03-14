@@ -35,13 +35,13 @@ describe('CORS Test Component', () => {
         success: true,
       },
       absoluteTest: {
-        url: 'https://careerpathfinder.io/api/test',
+        url: 'https://www.careerpathfinder.io/api/test',
         success: false,
         error: 'CORS policy violation',
         isCorsError: true,
       },
       details: {
-        origin: 'https://careerpathfinder.io',
+        origin: 'https://www.careerpathfinder.io',
         userAgent: 'test-user-agent',
         timestamp: '2023-01-01T00:00:00.000Z',
       },

@@ -5,13 +5,13 @@
  * that critical functionality is working correctly.
  * 
  * Usage:
- * NODE_ENV=production API_URL=https://careerpathfinder.io node tests/deployment.test.js
+ * NODE_ENV=production API_URL=https://www.careerpathfinder.io node tests/deployment.test.js
  */
 
 const fetch = require('node-fetch');
 
 // Get the API URL from environment variable or use a default
-const API_URL = process.env.API_URL || 'https://careerpathfinder.io';
+const API_URL = process.env.API_URL || 'https://www.careerpathfinder.io';
 const ENVIRONMENT = process.env.NODE_ENV || 'development';
 
 console.log(`Running deployment tests against ${API_URL} in ${ENVIRONMENT} environment`);
@@ -33,7 +33,7 @@ async function testUtilityEndpoints() {
       const optionsResponse = await fetch(`${API_URL}${endpoint}`, {
         method: 'OPTIONS',
         headers: {
-          'Origin': 'https://careerpathfinder.io',
+          'Origin': 'https://www.careerpathfinder.io',
           'Access-Control-Request-Method': 'GET',
           'Access-Control-Request-Headers': 'Content-Type'
         }
@@ -50,7 +50,7 @@ async function testUtilityEndpoints() {
       const getResponse = await fetch(`${API_URL}${endpoint}`, {
         method: 'GET',
         headers: {
-          'Origin': 'https://careerpathfinder.io',
+          'Origin': 'https://www.careerpathfinder.io',
           'Content-Type': 'application/json'
         }
       });

@@ -230,7 +230,7 @@ async function initializeDefaultUser() {
           nodeEnv: process.env.NODE_ENV,
           cors: {
             allowedOrigins: [
-              'https://careerpathfinder.io',
+              'https://www.careerpathfinder.io',
               'https://api.careerpathfinder.io'
             ],
             credentialsSupported: true
@@ -319,7 +319,7 @@ async function initializeDefaultUser() {
       console.log(`Server running at http://localhost:${port}`);
       console.log('Environment:', process.env.NODE_ENV);
       console.log('CORS origin:', process.env.NODE_ENV === 'production' 
-        ? ['https://careerpathfinder.io']
+        ? ['https://www.careerpathfinder.io']
         : 'http://localhost:5173'
       );
     });

@@ -248,7 +248,7 @@ export default function Survey() {
               // Always use relative URL in production
               const isProduction = import.meta.env.MODE === 'production';
               const hostname = window.location.hostname;
-              const isProductionDomain = hostname.includes('careerpathfinder.io');
+              const isProductionDomain = hostname.includes('www.careerpathfinder.io');
               
               const corsTestUrl = isProduction && isProductionDomain
                 ? '/api/cors-test'  // Use relative URL in production

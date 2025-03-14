@@ -2,7 +2,7 @@
 
 ## Understanding the Issue
 
-The application is encountering CORS (Cross-Origin Resource Sharing) issues when the frontend at `https://careerpathfinder.io` attempts to access the API at `https://careerpathfinder.io/api/test`. 
+The application is encountering CORS (Cross-Origin Resource Sharing) issues when the frontend at `https://www.careerpathfinder.io` attempts to access the API at `https://www.careerpathfinder.io/api/test`. 
 
 This happens because browsers enforce the Same-Origin Policy, which prevents web pages from making requests to domains different from the one that served the page.
 
@@ -39,7 +39,7 @@ For a production environment, consider these additional improvements:
 
 1. **Use the Same Domain for Frontend and API**: 
    - Ideally, serve both from the same domain to avoid CORS issues entirely
-   - Standardize on `careerpathfinder.io` for all services
+   - Standardize on `www.careerpathfinder.io` for all services
 
 2. **Configure DNS and Redirects Properly**:
    - Set up proper redirects to ensure users always land on the canonical domain

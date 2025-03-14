@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 // Configure CORS allowed origins
 export const allowedOrigins = process.env.NODE_ENV === 'production' 
   ? [
-      'https://careerpathfinder.io',
+      'https://www.careerpathfinder.io',
       'https://api.careerpathfinder.io',
     ] 
   : ['http://localhost:5173']; // Vite's default development port
@@ -12,8 +12,8 @@ export const allowedOrigins = process.env.NODE_ENV === 'production'
 export function redirectMiddleware(req: Request, res: Response, next: NextFunction): void {
   const host = req.headers.host || '';
   
-  // Standardize on non-www version
-  if (host === 'www.careerpathfinder.io') {
+  // Standardize on www version
+  if (host === 'careerpathfinder.io') {
     // Set CORS headers before redirect
     const origin = req.headers.origin;
     if (origin) {
@@ -24,8 +24,8 @@ export function redirectMiddleware(req: Request, res: Response, next: NextFuncti
       res.header('Vary', 'Origin');
     }
     
-    // 301 redirect to non-www version
-    res.redirect(301, `https://careerpathfinder.io${req.url}`);
+    // 301 redirect to www version
+    res.redirect(301, `https://www.careerpathfinder.io${req.url}`);
     return;
   }
   next();
@@ -136,7 +136,7 @@ export function staticAssetsCorsMiddleware(req: Request, res: Response, next: Ne
     
     // Allow both www and non-www versions during transition period
     if (origin && (
-      origin === 'https://careerpathfinder.io'
+      origin === 'https://www.careerpathfinder.io'
     )) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
