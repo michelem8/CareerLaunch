@@ -30,9 +30,25 @@ export async function registerRoutes(app: Express) {
 
   // Add dedicated CORS test endpoints at multiple potential paths for reliability
   app.get(["/api/cors-test", "/cors-test", "/api/utils/cors-test"], (req: Request, res: Response) => {
+    // Make sure the content type is set correctly and early
     res.setHeader('Content-Type', 'application/json');
+    
+    // Set explicit CORS headers for this endpoint
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Mark as API request (redundant but safe)
+    if (!req.isApiRequest) {
+      req.isApiRequest = true;
+    }
+    
+    // Log detailed information about the request
+    console.log(`CORS test endpoint called: ${req.path}`, {
+      headers: req.headers,
+      isApiRequest: req.isApiRequest,
+      originalUrl: req.originalUrl,
+      method: req.method
+    });
     
     res.json({
       success: true,
@@ -47,6 +63,43 @@ export async function registerRoutes(app: Express) {
       originalUrl: req.originalUrl,
       isApiRequest: req.isApiRequest
     });
+  });
+
+  // Add explicit OPTIONS handler for CORS test endpoints
+  app.options("/api/cors-test", (req: Request, res: Response) => {
+    // Set explicit CORS headers for OPTIONS requests
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    
+    // End OPTIONS requests with 204 No Content
+    res.status(204).end();
+  });
+  
+  app.options("/cors-test", (req: Request, res: Response) => {
+    // Set explicit CORS headers for OPTIONS requests
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    
+    // End OPTIONS requests with 204 No Content
+    res.status(204).end();
+  });
+  
+  app.options("/api/utils/cors-test", (req: Request, res: Response) => {
+    // Set explicit CORS headers for OPTIONS requests
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    
+    // End OPTIONS requests with 204 No Content
+    res.status(204).end();
   });
 
   // Add a dedicated diagnostic endpoint for API troubleshooting

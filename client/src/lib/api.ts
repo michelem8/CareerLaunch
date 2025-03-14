@@ -12,9 +12,9 @@ export const getApiBaseUrl = (): string => {
 
   // In production environment, use the deployed API URL
   if (import.meta.env.MODE === 'production') {
-    // Return the absolute production API URL instead of relative path
-    // This ensures we hit the actual API server instead of the frontend host
-    return 'https://api.careerpathfinder.io';
+    // Explicitly use the same domain for API requests to avoid CORS issues
+    // This works because our server handles both static files and API requests
+    return window.location.origin;
   }
 
   // Development fallback
@@ -37,6 +37,12 @@ export const getApiUrl = (endpoint: string): string => {
   if (!normalizedEndpoint.startsWith('/api/')) {
     // Always add /api/ prefix to endpoints that don't have it
     normalizedEndpoint = `/api${normalizedEndpoint}`;
+  }
+  
+  // Some endpoints are known to have issues in production - log them with more detail
+  if (normalizedEndpoint.includes('/cors-test') || normalizedEndpoint.includes('/utils/')) {
+    console.log(`Building URL for special endpoint: ${normalizedEndpoint}`);
+    console.log(`Environment: ${import.meta.env.MODE}, Base URL: ${baseUrl}`);
   }
   
   // Super simple URL construction - just join the parts

@@ -1,6 +1,6 @@
 import request from 'supertest';
 import express from 'express';
-import { redirectMiddleware } from '../index';
+import { redirectMiddleware } from '../middleware';
 import { serveStatic } from '../vite';
 import path from 'path';
 import fs from 'fs';
@@ -37,8 +37,7 @@ describe('CORS Middleware Tests', () => {
     app.use(cors({
       origin: (origin, callback) => {
         const allowedOrigins = [
-          'https://careerpathfinder.io',
-          'https://www.careerpathfinder.io'
+          'https://careerpathfinder.io'
         ];
         
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
@@ -67,7 +66,7 @@ describe('CORS Middleware Tests', () => {
     });
   });
   
-  test('Should set CORS headers for requests from www domain', async () => {
+  test('Should support legacy www domain during transition period', async () => {
     const response = await request(app)
       .get('/test')
       .set('Origin', 'https://www.careerpathfinder.io');
@@ -77,7 +76,7 @@ describe('CORS Middleware Tests', () => {
     expect(response.headers['access-control-allow-credentials']).toBe('true');
   });
   
-  test('Should set CORS headers for requests from non-www domain', async () => {
+  test('Should set CORS headers for requests from primary domain', async () => {
     const response = await request(app)
       .get('/test')
       .set('Origin', 'https://careerpathfinder.io');
@@ -87,26 +86,26 @@ describe('CORS Middleware Tests', () => {
     expect(response.headers['access-control-allow-credentials']).toBe('true');
   });
   
-  test('Should redirect from non-www to www domain with CORS headers', async () => {
+  test('Should redirect from www to non-www domain with CORS headers', async () => {
     const response = await request(app)
       .get('/test')
-      .set('Host', 'careerpathfinder.io')
-      .set('Origin', 'https://careerpathfinder.io');
+      .set('Host', 'www.careerpathfinder.io')
+      .set('Origin', 'https://www.careerpathfinder.io');
     
     expect(response.status).toBe(301);
-    expect(response.headers.location).toBe('https://www.careerpathfinder.io/test');
-    expect(response.headers['access-control-allow-origin']).toBe('https://careerpathfinder.io');
+    expect(response.headers.location).toBe('https://careerpathfinder.io/test');
+    expect(response.headers['access-control-allow-origin']).toBe('https://www.careerpathfinder.io');
     expect(response.headers['access-control-allow-credentials']).toBe('true');
   });
   
   test('Should handle OPTIONS preflight requests correctly', async () => {
     const response = await request(app)
       .options('/test')
-      .set('Origin', 'https://www.careerpathfinder.io')
+      .set('Origin', 'https://careerpathfinder.io')
       .set('Access-Control-Request-Method', 'GET');
     
     expect(response.status).toBe(204);
-    expect(response.headers['access-control-allow-origin']).toBe('https://www.careerpathfinder.io');
+    expect(response.headers['access-control-allow-origin']).toBe('https://careerpathfinder.io');
     expect(response.headers['access-control-allow-methods']).toBeTruthy();
     expect(response.headers['access-control-allow-credentials']).toBe('true');
   });

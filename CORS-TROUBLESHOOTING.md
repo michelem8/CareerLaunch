@@ -2,20 +2,20 @@
 
 ## Understanding the Issue
 
-The application is encountering CORS (Cross-Origin Resource Sharing) issues when the frontend at `https://careerpathfinder.io` attempts to access the API at `https://www.careerpathfinder.io/api/test`. 
+The application is encountering CORS (Cross-Origin Resource Sharing) issues when the frontend at `https://careerpathfinder.io` attempts to access the API at `https://careerpathfinder.io/api/test`. 
 
-This happens because browsers enforce the Same-Origin Policy, which prevents web pages from making requests to domains different from the one that served the page. In this case, the `www` subdomain makes it a different origin from the non-www domain.
+This happens because browsers enforce the Same-Origin Policy, which prevents web pages from making requests to domains different from the one that served the page.
 
 ## Changes Made to Fix the Issue
 
 1. **Updated API Test Endpoint**: Modified `api/test.ts` to:
    - Detect the origin of the request
-   - Allow requests from both www and non-www domains
+   - Allow requests from the correct domain
    - Send the appropriate CORS headers back in the response
 
 2. **Fixed Client API URL Handling**: Updated `client/src/lib/api.ts` to:
    - Use relative URLs in production to avoid CORS issues
-   - Handle both www and non-www domain scenarios
+   - Handle domain scenarios correctly
 
 3. **Updated Vercel Configuration**: Modified `vercel.json` to:
    - Set specific CORS headers for API routes
@@ -39,10 +39,10 @@ For a production environment, consider these additional improvements:
 
 1. **Use the Same Domain for Frontend and API**: 
    - Ideally, serve both from the same domain to avoid CORS issues entirely
-   - For example, serve both from `careerpathfinder.io` or both from `www.careerpathfinder.io`
+   - Standardize on `careerpathfinder.io` for all services
 
 2. **Configure DNS and Redirects Properly**:
-   - Set up proper redirects to ensure users always land on the same domain (either www or non-www)
+   - Set up proper redirects to ensure users always land on the canonical domain
    - Update all links to use the canonical domain
 
 3. **Centralize CORS Configuration**:

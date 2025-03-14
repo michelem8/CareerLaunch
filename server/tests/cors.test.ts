@@ -25,36 +25,36 @@ describe('CORS and Redirect Middleware Tests', () => {
     });
   });
 
-  test('should redirect from non-www to www domain', async () => {
-    const res = await request(app)
-      .get('/api/test')
-      .set('Host', 'careerpathfinder.io')
-      .set('Origin', 'https://careerpathfinder.io');
-    
-    expect(res.status).toBe(301);
-    expect(res.headers.location).toBe('https://www.careerpathfinder.io/api/test');
-  });
-
-  test('should set CORS headers for www domain', async () => {
+  test('should redirect from www to non-www domain', async () => {
     const res = await request(app)
       .get('/api/test')
       .set('Host', 'www.careerpathfinder.io')
       .set('Origin', 'https://www.careerpathfinder.io');
     
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toBe('https://careerpathfinder.io/api/test');
+  });
+
+  test('should set CORS headers for non-www domain', async () => {
+    const res = await request(app)
+      .get('/api/test')
+      .set('Host', 'careerpathfinder.io')
+      .set('Origin', 'https://careerpathfinder.io');
+    
     expect(res.status).toBe(200);
-    expect(res.headers['access-control-allow-origin']).toBe('https://www.careerpathfinder.io');
+    expect(res.headers['access-control-allow-origin']).toBe('https://careerpathfinder.io');
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
 
   test('should handle OPTIONS preflight requests correctly', async () => {
     const res = await request(app)
       .options('/api/test')
-      .set('Host', 'www.careerpathfinder.io')
-      .set('Origin', 'https://www.careerpathfinder.io')
+      .set('Host', 'careerpathfinder.io')
+      .set('Origin', 'https://careerpathfinder.io')
       .set('Access-Control-Request-Method', 'GET');
     
     expect(res.status).toBe(204);
-    expect(res.headers['access-control-allow-origin']).toBe('https://www.careerpathfinder.io');
+    expect(res.headers['access-control-allow-origin']).toBe('https://careerpathfinder.io');
     expect(res.headers['access-control-allow-credentials']).toBe('true');
     expect(res.headers['access-control-allow-methods']).toContain('GET');
   });
@@ -62,33 +62,33 @@ describe('CORS and Redirect Middleware Tests', () => {
   test('should set CORS headers for static assets', async () => {
     const res = await request(app)
       .get('/assets/test.js')
-      .set('Host', 'www.careerpathfinder.io')
-      .set('Origin', 'https://www.careerpathfinder.io');
+      .set('Host', 'careerpathfinder.io')
+      .set('Origin', 'https://careerpathfinder.io');
     
     expect(res.status).toBe(200);
-    expect(res.headers['access-control-allow-origin']).toBe('https://www.careerpathfinder.io');
+    expect(res.headers['access-control-allow-origin']).toBe('https://careerpathfinder.io');
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
 
   test('should set CORS headers for favicon.ico', async () => {
     const res = await request(app)
       .get('/favicon.ico')
-      .set('Host', 'www.careerpathfinder.io')
-      .set('Origin', 'https://www.careerpathfinder.io');
-    
-    expect(res.status).toBe(200);
-    expect(res.headers['access-control-allow-origin']).toBe('https://www.careerpathfinder.io');
-    expect(res.headers['access-control-allow-credentials']).toBe('true');
-  });
-
-  test('should allow cross-origin requests between www and non-www domains', async () => {
-    const res = await request(app)
-      .get('/assets/test.js')
-      .set('Host', 'www.careerpathfinder.io')
+      .set('Host', 'careerpathfinder.io')
       .set('Origin', 'https://careerpathfinder.io');
     
     expect(res.status).toBe(200);
     expect(res.headers['access-control-allow-origin']).toBe('https://careerpathfinder.io');
+    expect(res.headers['access-control-allow-credentials']).toBe('true');
+  });
+
+  test('should allow cross-origin requests during transition period', async () => {
+    const res = await request(app)
+      .get('/assets/test.js')
+      .set('Host', 'careerpathfinder.io')
+      .set('Origin', 'https://www.careerpathfinder.io');
+    
+    expect(res.status).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBe('https://www.careerpathfinder.io');
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
 }); 

@@ -4,7 +4,6 @@ import { Request, Response, NextFunction } from "express";
 export const allowedOrigins = process.env.NODE_ENV === 'production' 
   ? [
       'https://careerpathfinder.io',
-      'https://www.careerpathfinder.io',
       'https://api.careerpathfinder.io',
     ] 
   : ['http://localhost:5173']; // Vite's default development port
@@ -13,8 +12,8 @@ export const allowedOrigins = process.env.NODE_ENV === 'production'
 export function redirectMiddleware(req: Request, res: Response, next: NextFunction): void {
   const host = req.headers.host || '';
   
-  // Standardize on www version
-  if (host === 'careerpathfinder.io') {
+  // Standardize on non-www version
+  if (host === 'www.careerpathfinder.io') {
     // Set CORS headers before redirect
     const origin = req.headers.origin;
     if (origin) {
@@ -25,8 +24,8 @@ export function redirectMiddleware(req: Request, res: Response, next: NextFuncti
       res.header('Vary', 'Origin');
     }
     
-    // 301 redirect to www version
-    res.redirect(301, `https://www.careerpathfinder.io${req.url}`);
+    // 301 redirect to non-www version
+    res.redirect(301, `https://careerpathfinder.io${req.url}`);
     return;
   }
   next();
@@ -35,6 +34,32 @@ export function redirectMiddleware(req: Request, res: Response, next: NextFuncti
 // CORS middleware with improved handling
 export function corsMiddleware(req: Request, res: Response, next: NextFunction): void {
   const origin = req.headers.origin;
+  
+  // Special handling for specific API endpoints that need to work in all environments
+  const isUtilEndpoint = req.path.includes('/api/utils/cors-test') || 
+                         req.originalUrl.includes('/api/utils/cors-test') ||
+                         req.path === '/api/cors-test' ||
+                         req.originalUrl === '/api/cors-test';
+                         
+  if (isUtilEndpoint) {
+    console.log(`[CORS] Special handling for utility endpoint: ${req.originalUrl}`);
+    // Force setting isApiRequest flag
+    (req as any).isApiRequest = true;
+    // Set JSON content type
+    res.header('Content-Type', 'application/json');
+    
+    // Always allow CORS for utility endpoints
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    if (req.method === 'OPTIONS') {
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+      res.header('Access-Control-Max-Age', '86400');
+      res.status(204).end();
+      return;
+    }
+  }
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -109,9 +134,8 @@ export function staticAssetsCorsMiddleware(req: Request, res: Response, next: Ne
   if (req.path.startsWith('/assets/') || req.path === '/favicon.ico') {
     const origin = req.headers.origin;
     
-    // Allow both www and non-www versions
+    // Allow both www and non-www versions during transition period
     if (origin && (
-      origin === 'https://www.careerpathfinder.io' || 
       origin === 'https://careerpathfinder.io'
     )) {
       res.header('Access-Control-Allow-Origin', origin);

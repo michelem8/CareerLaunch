@@ -63,7 +63,8 @@ describe('API Utils', () => {
       expect(getApiBaseUrl()).toBe('');
     });
     
-    it('should use empty string for production on www.careerpathfinder.io', () => {
+    // Also support legacy www subdomain during transition
+    it('should use empty string for production on www.careerpathfinder.io (legacy)', () => {
       import.meta.env.MODE = 'production';
       import.meta.env.VITE_API_URL = undefined;
       global.window.location = { hostname: 'www.careerpathfinder.io' } as Location;

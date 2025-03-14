@@ -44,6 +44,9 @@ app.use((req, res, next) => {
       req.path.startsWith('/api/') || 
       req.url.startsWith('/api/') ||
       req.originalUrl.includes('/api/') ||
+      // Specifically check for utils endpoints
+      req.path.includes('/api/utils/') ||
+      req.originalUrl.includes('/api/utils/') ||
       // Handle test endpoints specifically
       req.path === '/test' ||
       req.path === '/cors-test' ||
@@ -227,7 +230,6 @@ async function initializeDefaultUser() {
           nodeEnv: process.env.NODE_ENV,
           cors: {
             allowedOrigins: [
-              'https://www.careerpathfinder.io',
               'https://careerpathfinder.io',
               'https://api.careerpathfinder.io'
             ],
@@ -263,6 +265,8 @@ async function initializeDefaultUser() {
             req.path.startsWith('/api/') || 
             req.url.startsWith('/api/') ||
             req.originalUrl.includes('/api/') ||
+            req.path.includes('/api/utils/') ||
+            req.originalUrl.includes('/api/utils/') ||
             req.path === '/test' ||
             req.path === '/cors-test' ||
             req.path === '/api/test' ||
@@ -315,7 +319,7 @@ async function initializeDefaultUser() {
       console.log(`Server running at http://localhost:${port}`);
       console.log('Environment:', process.env.NODE_ENV);
       console.log('CORS origin:', process.env.NODE_ENV === 'production' 
-        ? ['https://careerpathfinder.io', 'https://www.careerpathfinder.io']
+        ? ['https://careerpathfinder.io']
         : 'http://localhost:5173'
       );
     });

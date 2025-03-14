@@ -35,7 +35,7 @@ describe('CORS Test Component', () => {
         success: true,
       },
       absoluteTest: {
-        url: 'https://www.careerpathfinder.io/api/test',
+        url: 'https://careerpathfinder.io/api/test',
         success: false,
         error: 'CORS policy violation',
         isCorsError: true,

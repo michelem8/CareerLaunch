@@ -83,7 +83,7 @@ describe('CORS handling', () => {
   });
 
   it('should work with multiple origin formats', async () => {
-    // Test with WWW subdomain
+    // Legacy test with WWW subdomain (for backwards compatibility during transition)
     Object.defineProperty(window, 'location', {
       value: {
         origin: 'https://www.careerpathfinder.io'
