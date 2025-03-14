@@ -6,6 +6,7 @@ import cors from "cors";
 import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
+import { redirectMiddleware, corsMiddleware, preflightRedirectMiddleware, staticAssetsCorsMiddleware, allowedOrigins } from "./middleware";
 
 // Use __dirname directly since we're using Node.js environment
 const __dirname = path.resolve();
@@ -27,49 +28,13 @@ if (!process.env.RAPID_API_KEY) {
 const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
-// Configure CORS
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [
-      'https://careerpathfinder.io',
-      'https://www.careerpathfinder.io',
-      'https://api.careerpathfinder.io',
-      // Add any additional domains or subdomains here
-    ] 
-  : ['http://localhost:5173']; // Vite's default development port
+// Apply middleware in the correct order
+if (process.env.NODE_ENV === 'production') {
+  app.use(redirectMiddleware);
+}
 
-// CORS middleware with improved handling
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const origin = req.headers.origin;
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    // Set CORS headers for preflight requests
-    res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept, X-CSRF-Token, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400'); // 24 hours
-    
-    // Respond with 204 No Content for OPTIONS requests
-    return res.status(204).end();
-  }
-  
-  // For non-OPTIONS requests, set standard CORS headers
-  if (origin) {
-    // Check if the origin is allowed
-    const isAllowed = allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production';
-    
-    if (isAllowed) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Credentials', 'true');
-      console.log(`Origin allowed by CORS policy: ${origin}`);
-    } else {
-      console.warn(`Origin rejected by CORS policy: ${origin}`);
-    }
-  }
-  
-  next();
-});
+// Apply CORS middleware
+app.use(corsMiddleware);
 
 // Also keep the standard cors middleware for compatibility
 app.use(cors({
@@ -142,30 +107,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware to ensure no unnecessary redirects for preflight requests
-app.use((req, res, next) => {
-  // Skip redirects for OPTIONS requests to prevent CORS preflight issues
-  if (req.method === 'OPTIONS') {
-    // Set proper CORS headers directly
-    const origin = req.headers.origin;
-    
-    // Check if origin is allowed
-    if (origin && (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production')) {
-      res.header('Access-Control-Allow-Origin', origin);
-    } else {
-      res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
-    }
-    
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    
-    // Respond immediately with 204 No Content
-    return res.status(204).end();
-  }
-  
-  next();
-});
+// Apply preflight redirect middleware
+app.use(preflightRedirectMiddleware);
 
 // Initialize default user
 async function initializeDefaultUser() {
@@ -250,6 +193,9 @@ async function initializeDefaultUser() {
     if (process.env.NODE_ENV === 'development') {
       await setupVite(app, httpServer);
     } else {
+      // Apply static assets CORS middleware
+      app.use(staticAssetsCorsMiddleware);
+      
       // Serve static files in production
       serveStatic(app);
       

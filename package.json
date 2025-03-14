@@ -10,11 +10,19 @@
     "build": "cd client && npm install && npm run build",
     "start": "cd server && npm start",
     "dev": "concurrently \"cd client && npm run dev\" \"cd server && npm run dev\"",
-    "vercel-build": "cd client && npm install --include=dev && npm run build"
+    "vercel-build": "cd client && npm install --include=dev && npm run build",
+    "test": "jest"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/supertest": "^6.0.2",
     "@vercel/node": "^5.1.13",
-    "concurrently": "^8.0.0"
+    "concurrently": "^8.0.0",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.6"
   },
   "dependencies": {
     "openai": "^3.3.0"

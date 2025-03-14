@@ -5,10 +5,10 @@
       "has": [
         {
           "type": "host",
-          "value": "www.careerpathfinder.io"
+          "value": "careerpathfinder.io"
         }
       ],
-      "destination": "https://careerpathfinder.io/:path*",
+      "destination": "https://www.careerpathfinder.io/:path*",
       "permanent": true
     }
   ],

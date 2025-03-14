@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
@@ -48,7 +48,7 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(viteInstance.middlewares);
-  app.use("*", async (req, res, next) => {
+  app.use("*", async (req: Request, res: Response, next: NextFunction) => {
     const url = req.originalUrl;
 
     // Skip API routes
@@ -91,13 +91,71 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Serve static files
-  app.use(express.static(publicPath));
+  // Serve static files with proper cache control
+  app.use(express.static(publicPath, {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+      // Set cache control headers based on file type
+      if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+        // Cache JS and CSS for 1 week
+        res.setHeader('Cache-Control', 'public, max-age=604800');
+      } else if (filePath.endsWith('.png') || filePath.endsWith('.jpg') || filePath.endsWith('.gif') || filePath.endsWith('.ico')) {
+        // Cache images for 1 day
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      } else {
+        // Default cache for 1 hour
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+      }
+    }
+  }));
 
-  // Serve index.html for all non-API routes
-  app.use("*", (req, res, next) => {
+  // Special handling for favicon.ico to prevent redirect loops
+  app.get('/favicon.ico', (req: Request, res: Response) => {
+    const faviconPath = path.join(publicPath, 'favicon.ico');
+    
+    // Set CORS headers for favicon
+    const origin = req.headers.origin;
+    if (origin && origin.includes('careerpathfinder.io')) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Methods', 'GET');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Vary', 'Origin');
+    }
+    
+    // Send the favicon with proper cache headers
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(faviconPath);
+  });
+
+  // Serve index.html for all non-API routes - using a named function to avoid linter errors
+  function serveIndexHtml(req: Request, res: Response, next: NextFunction) {
     if (req.originalUrl.startsWith('/api/')) {
       return next();
+    }
+    
+    // Special handling for asset files to prevent redirect loops
+    if (req.originalUrl.startsWith('/assets/')) {
+      const assetPath = path.join(publicPath, req.originalUrl);
+      
+      // Set CORS headers for assets
+      const origin = req.headers.origin;
+      if (origin && origin.includes('careerpathfinder.io')) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Methods', 'GET');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Vary', 'Origin');
+      }
+      
+      // Send the asset with proper cache headers
+      if (req.originalUrl.endsWith('.js') || req.originalUrl.endsWith('.css')) {
+        res.setHeader('Cache-Control', 'public, max-age=604800');
+      } else if (req.originalUrl.endsWith('.png') || req.originalUrl.endsWith('.jpg') || 
+                req.originalUrl.endsWith('.gif') || req.originalUrl.endsWith('.ico')) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+      
+      return res.sendFile(assetPath);
     }
     
     const indexPath = path.join(publicPath, "index.html");
@@ -108,8 +166,18 @@ export function serveStatic(app: Express) {
       return next(new Error('index.html not found'));
     }
     
+    // Set CORS headers for index.html as well
+    const origin = req.headers.origin;
+    if (origin && origin.includes('careerpathfinder.io')) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Vary', 'Origin');
+    }
+    
     res.sendFile(indexPath);
-  });
+  }
+
+  app.use("*", serveIndexHtml);
 
   staticInstance = true;
 }
