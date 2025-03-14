@@ -47,9 +47,10 @@ const CareerDashboard: React.FC = () => {
             recommendations: data.resumeAnalysis?.recommendations?.length || 0
           });
           
-          // Ensure resumeAnalysis is at least an empty object with arrays
+          // Ensure resumeAnalysis is fully initialized - NO MATTER WHAT
+          // This is a defensive approach to prevent issues in production
           if (!data.resumeAnalysis) {
-            console.warn('Fixing missing resumeAnalysis in client');
+            console.warn('Missing resumeAnalysis in user data - creating it');
             data.resumeAnalysis = {
               skills: [],
               experience: [],
@@ -58,7 +59,48 @@ const CareerDashboard: React.FC = () => {
               missingSkills: [],
               recommendations: []
             };
+          } else {
+            // Ensure all required properties exist
+            if (!Array.isArray(data.resumeAnalysis.skills)) {
+              console.warn('Fixing missing skills array in resumeAnalysis');
+              data.resumeAnalysis.skills = data.skills || [];
+            }
+            if (!Array.isArray(data.resumeAnalysis.missingSkills)) {
+              console.warn('Fixing missing missingSkills array in resumeAnalysis');
+              data.resumeAnalysis.missingSkills = [];
+            }
+            if (!Array.isArray(data.resumeAnalysis.recommendations)) {
+              console.warn('Fixing missing recommendations array in resumeAnalysis');
+              data.resumeAnalysis.recommendations = [];
+            }
+            if (!Array.isArray(data.resumeAnalysis.suggestedRoles)) {
+              console.warn('Fixing missing suggestedRoles array in resumeAnalysis');
+              data.resumeAnalysis.suggestedRoles = [];
+            }
+            if (!Array.isArray(data.resumeAnalysis.experience)) {
+              console.warn('Fixing missing experience array in resumeAnalysis');
+              data.resumeAnalysis.experience = [];
+            }
+            if (!Array.isArray(data.resumeAnalysis.education)) {
+              console.warn('Fixing missing education array in resumeAnalysis');
+              data.resumeAnalysis.education = [];
+            }
           }
+          
+          // Add post-processing validation
+          console.log('After fixes, resumeAnalysis status:', {
+            exists: !!data.resumeAnalysis,
+            missingSkills: data.resumeAnalysis?.missingSkills?.length || 0,
+            recommendations: data.resumeAnalysis?.recommendations?.length || 0,
+            allArraysExist: !!(
+              Array.isArray(data.resumeAnalysis?.skills) &&
+              Array.isArray(data.resumeAnalysis?.missingSkills) &&
+              Array.isArray(data.resumeAnalysis?.recommendations) &&
+              Array.isArray(data.resumeAnalysis?.suggestedRoles) &&
+              Array.isArray(data.resumeAnalysis?.experience) &&
+              Array.isArray(data.resumeAnalysis?.education)
+            )
+          });
           
           return data;
         } catch (err) {

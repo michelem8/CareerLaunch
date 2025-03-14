@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', 'https://careerpathfinder.io');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -30,6 +30,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         configured: false
       });
     }
+
+    // Log the API key format (but not the key itself) for debugging
+    console.log('OpenAI API key format check:', {
+      length: process.env.OPENAI_API_KEY.length,
+      startsWithSk: process.env.OPENAI_API_KEY.startsWith('sk-'),
+      firstFiveChars: process.env.OPENAI_API_KEY.substring(0, 5) + '...'
+    });
 
     // Initialize OpenAI client
     const openai = new OpenAI({

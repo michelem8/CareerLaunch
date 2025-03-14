@@ -29,13 +29,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('Current role:', currentRole);
       console.log('Target role:', targetRole);
 
-      // Create a mock analysis response
+      // Check if there's content to analyze
+      if (!resumeText || resumeText.length === 0) {
+        return res.status(400).json({
+          error: { 
+            code: '400', 
+            message: 'Resume text is required for analysis'
+          }
+        });
+      }
+
+      // Ensure we always have a target role
+      const effectiveTargetRole = targetRole || 'Software Engineer';
+      console.log('Using target role for analysis:', effectiveTargetRole);
+
+      // Extract skills from the resume (simplified extraction)
+      const extractedSkills = extractSkillsFromResume(resumeText);
+      console.log('Extracted skills from resume:', extractedSkills);
+
+      // Create a mock analysis response - ALWAYS include missing skills, even in production
       const mockAnalysis = {
         user: {
           id: 1,
           username: "demo_user",
           resumeAnalysis: {
-            skills: [
+            skills: extractedSkills.length > 0 ? extractedSkills : [
               "JavaScript", 
               "React", 
               "Node.js", 
@@ -92,7 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       };
 
-      console.log('Sending mock analysis response');
+      console.log('Sending mock analysis response with missing skills');
       res.status(200).json(mockAnalysis);
     } catch (error) {
       console.error('Error in simplified resume analysis endpoint:', error);
@@ -117,4 +135,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   
   console.log('==== API HANDLER END: /api/resume/analyze (SIMPLIFIED) ====');
+}
+
+// Helper function to extract skills from resume text (simplified)
+function extractSkillsFromResume(resumeText: string): string[] {
+  // Common tech skills to look for
+  const commonSkills = [
+    "JavaScript", "TypeScript", "React", "Vue", "Angular", "Node.js",
+    "Python", "Java", "C#", "C++", "Ruby", "PHP", "Go", "Rust",
+    "HTML", "CSS", "SQL", "NoSQL", "MongoDB", "PostgreSQL", "MySQL",
+    "AWS", "Azure", "GCP", "Docker", "Kubernetes", "CI/CD", "Git",
+    "Agile", "Scrum", "REST", "GraphQL", "Microservices", "DevOps"
+  ];
+
+  // Return skills found in the resume
+  return commonSkills.filter(skill => 
+    resumeText.toLowerCase().includes(skill.toLowerCase())
+  );
 } 

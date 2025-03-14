@@ -17,6 +17,8 @@ export interface User {
     missingSkills: string[];
     recommendations: string[];
     suggestedRoles: string[];
+    experience: string[];
+    education: string[];
   };
 }
 
@@ -76,6 +78,33 @@ export const RoleCard: React.FC<{ title: string; subtitle?: string; skills: stri
 
 export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
   const isProduction = import.meta.env.MODE === 'production';
+  
+  // IMMEDIATE data validation/normalization - before any hooks
+  if (!user.resumeAnalysis) {
+    console.warn('CareerDashboard - IMMEDIATE FIX: resumeAnalysis is completely missing');
+    user = {
+      ...user,
+      resumeAnalysis: {
+        skills: user.skills || [],
+        missingSkills: [],
+        recommendations: [],
+        suggestedRoles: [],
+        experience: [],
+        education: []
+      }
+    };
+  } else {
+    // Ensure all critical arrays exist
+    if (!Array.isArray(user.resumeAnalysis.missingSkills)) {
+      console.warn('CareerDashboard - IMMEDIATE FIX: missingSkills array is missing');
+      user.resumeAnalysis.missingSkills = [];
+    }
+    if (!Array.isArray(user.resumeAnalysis.recommendations)) {
+      console.warn('CareerDashboard - IMMEDIATE FIX: recommendations array is missing');
+      user.resumeAnalysis.recommendations = [];
+    }
+  }
+  
   const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -105,6 +134,16 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
       if (!normalizedUser.resumeAnalysis.missingSkills || normalizedUser.resumeAnalysis.missingSkills.length === 0) {
         console.warn('No missing skills found, cannot fetch AI recommendations');
         setAiError('No missing skills identified');
+        
+        // In production, we'll set default recommendations if the API response fails
+        if (isProduction) {
+          setAiRecommendations([
+            "Complete your career profile to get personalized recommendations",
+            "Add your current skills in your profile settings",
+            "Set your target role to see skill gaps",
+            "Upload your resume for a comprehensive analysis"
+          ]);
+        }
         return;
       }
       
@@ -142,13 +181,12 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
           console.log('Using stored recommendations as fallback');
           setAiRecommendations(normalizedUser.resumeAnalysis.recommendations);
         }
-      } finally {
-        setIsLoadingAi(false);
       }
+      setIsLoadingAi(false);
     };
     
     fetchAIRecommendations();
-  }, [normalizedUser.resumeAnalysis?.missingSkills]);
+  }, [normalizedUser.resumeAnalysis?.missingSkills, isProduction]);
   
   // Only use fallback data in development, never in production
   if (!normalizedUser.resumeAnalysis && !isProduction) {
@@ -167,7 +205,9 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
         "Develop stronger architecture and system design knowledge",
         "Work on communication skills for technical and non-technical audiences"
       ],
-      suggestedRoles: ["Engineering Manager", "Technical Lead", "Product Manager"]
+      suggestedRoles: ["Engineering Manager", "Technical Lead", "Product Manager"],
+      experience: [],
+      education: []
     };
   }
 
@@ -264,11 +304,29 @@ export const CareerDashboard: React.FC<CareerDashboardProps> = ({ user }) => {
               <p className="text-gray-600">Generating personalized AI recommendations...</p>
             </div>
           ) : aiError && !recommendations.length ? (
-            <div className="text-red-500">
-              <p>Could not load AI recommendations: {aiError}</p>
-              <p className="mt-2 text-gray-600">
-                Please make sure you have completed your career profile with current skills and target role.
+            <div className="text-center p-4">
+              <p className="text-gray-700 font-medium mb-3">
+                {aiError === 'No missing skills identified' 
+                  ? 'No skill gaps were identified for your career path' 
+                  : `Could not load AI recommendations: ${aiError}`}
               </p>
+              <div className="mt-2 text-gray-600 bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-lg mb-3">To get personalized recommendations:</h3>
+                <ol className="list-decimal text-left pl-5 space-y-2">
+                  <li>Ensure your <strong>target role</strong> is set correctly in your profile</li>
+                  <li>Add or update your <strong>current skills</strong> in your profile</li>
+                  <li>Upload an updated <strong>resume</strong> for detailed analysis</li>
+                  <li>Complete the <strong>career assessment</strong> if you haven't already</li>
+                </ol>
+                <div className="mt-6">
+                  <a 
+                    href="/profile"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Update Profile
+                  </a>
+                </div>
+              </div>
             </div>
           ) : recommendations.length > 0 ? (
             <RecommendationsList recommendations={recommendations} />
