@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
@@ -32,14 +32,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Initialize OpenAI client
-    const configuration = new Configuration({
+    const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
-    const openai = new OpenAIApi(configuration);
 
     // Make a simple request to check connectivity
-    const completion = await openai.createCompletion({
-      model: "text-davinci-003",
+    const completion = await openai.completions.create({
+      model: "gpt-3.5-turbo-instruct",
       prompt: "Hello, are you accessible?",
       max_tokens: 5
     });
@@ -49,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: 'success',
       message: 'OpenAI API is properly configured and accessible',
       configured: true,
-      test_response: completion.data.choices[0].text
+      test_response: completion.choices[0].text
     });
   } catch (error) {
     console.error('OpenAI connectivity check failed:', error);

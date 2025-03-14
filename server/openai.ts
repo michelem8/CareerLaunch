@@ -1,4 +1,5 @@
 import { openai } from "./openai-client";
+import type { ChatCompletionMessageParam } from "openai/resources";
 // Interface for our chat messages - simplified for v3 compatibility
 interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -17,8 +18,8 @@ export async function analyzeResume(resumeText: string) {
       };
     }
 
-    // For OpenAI v3, we use createChatCompletion instead of chat.completions.create
-    const response = await openai.createChatCompletion({
+    // For OpenAI v4, we use chat.completions.create
+    const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         {
@@ -55,11 +56,12 @@ IMPORTANT: Please format your response as a valid JSON object with the keys: ski
           role: "user",
           content: resumeText,
         },
-      ]
+      ] as ChatCompletionMessageParam[],
+      response_format: { type: "json_object" }
     });
 
-    // For OpenAI v3, the response format is different
-    const content = response.data.choices[0].message?.content;
+    // For OpenAI v4, the response format is different
+    const content = response.choices[0]?.message?.content;
     if (!content) {
       throw new Error("No response received from OpenAI");
     }
@@ -103,52 +105,26 @@ export async function getSkillGapAnalysis(
       throw new Error("Target role is required for skill gap analysis");
     }
 
-    const messages: ChatMessage[] = [
+    const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
-        content: `You are a career transition expert specializing in technical roles. Analyze the gap between current skills and target role requirements, with special focus on career changes between different domains.
+        content: `You are a career development expert specializing in identifying skill gaps. Analyze the user's current skills and their target role to identify missing skills and provide actionable recommendations.
 
-When analyzing transitions to software engineering roles, consider these key areas:
-1. Core Programming Skills
-   - Programming languages (e.g., Python, JavaScript, Java)
-   - Data structures and algorithms
-   - Object-oriented programming
-   - Functional programming concepts
-
-2. Software Development Practices
-   - Version control (Git)
-   - Testing methodologies
-   - Debugging techniques
-   - Code review practices
-   - Clean code principles
-
-3. Web Development (if relevant)
-   - Frontend technologies (HTML, CSS, JavaScript frameworks)
-   - Backend development
-   - API design and implementation
-   - Database management
-
-4. Software Architecture & System Design
-   - Design patterns
-   - System architecture
-   - Scalability and performance
-   - Microservices
-   - Cloud platforms (AWS, Azure, GCP)
-
-5. Development Tools & Practices
-   - IDE proficiency
-   - Build tools
-   - CI/CD pipelines
-   - Agile methodologies
-   - DevOps practices
-
-Return results in JSON format:
+Please provide your response in the following JSON format:
 {
-  "missingSkills": string[],  // 5-7 most critical skills needed, ordered by priority
-  "recommendations": string[]  // 5-7 specific, actionable learning steps with estimated timeframes
+  "missingSkills": ["Skill 1", "Skill 2", "Skill 3"],
+  "recommendations": ["Recommendation 1", "Recommendation 2", "Recommendation 3"]
 }
 
-Focus on foundational skills first, then specialized technologies. Consider the user's current skills and experience when making recommendations.`
+The "missingSkills" should be a list of specific technical or soft skills the person needs to develop to be competitive for the target role.
+The "recommendations" should be specific, actionable steps they can take to develop those skills or otherwise prepare for the target role.
+
+Guidelines:
+1. Identify 4-6 specific missing skills that are most critical for the target role
+2. Provide 4-6 specific recommendations for skill development
+3. Focus on the highest-impact skills for the target role
+4. Consider industry-standard technologies and methodologies
+5. Include both technical and soft skills where relevant`
       },
       {
         role: "user",
@@ -170,17 +146,17 @@ Please provide a detailed analysis of:
 
     console.log("Sending request to OpenAI with messages:", JSON.stringify(messages, null, 2));
 
-    // For OpenAI v3, we use createChatCompletion
-    const response = await openai.createChatCompletion({
+    // For OpenAI v4, we use chat.completions.create
+    const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages,
-      max_tokens: 1000 // Ensure we get a complete response
+      response_format: { type: "json_object" }
     });
 
-    console.log("Raw OpenAI response:", JSON.stringify(response.data, null, 2));
+    console.log("Raw OpenAI response:", JSON.stringify(response, null, 2));
 
-    // For OpenAI v3, the response format is different
-    const content = response.data.choices[0].message?.content;
+    // For OpenAI v4, the response format is different
+    const content = response.choices[0]?.message?.content;
     if (!content) {
       throw new Error("No response received from OpenAI");
     }

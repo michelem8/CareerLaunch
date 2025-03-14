@@ -1,4 +1,4 @@
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 import { config } from "dotenv";
 import path from "path";
 
@@ -30,11 +30,10 @@ if (apiKey && !apiKey.startsWith('sk-')) {
 let openaiClient = null;
 try {
   if (apiKey) {
-    // For OpenAI v3, we need to create a Configuration first, then pass it to OpenAIApi
-    const configuration = new Configuration({
+    // For OpenAI v4, we create the client directly
+    openaiClient = new OpenAI({
       apiKey: apiKey,
     });
-    openaiClient = new OpenAIApi(configuration);
     console.log('OpenAI client successfully initialized');
   } else {
     console.log('OpenAI client not initialized due to missing API key');

@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from "openai/resources";
 
 // Log OpenAI configuration status
 console.log('OpenAI API Key status:', process.env.OPENAI_API_KEY ? 'Present' : 'Missing');
@@ -11,10 +12,9 @@ if (process.env.OPENAI_API_KEY) {
 }
 
 // Initialize OpenAI client
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
@@ -64,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Generate career recommendations using OpenAI
     try {
-      const response = await openai.createChatCompletion({
+      const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
@@ -77,15 +77,15 @@ Be specific, actionable, and practical in your recommendations.`
             role: "user",
             content: `Based on my skill gaps in: ${skills.join(', ')}, what specific career development actions should I take?`
           }
-        ],
+        ] as ChatCompletionMessageParam[],
         temperature: 0.7,
         max_tokens: 500,
       });
 
-      console.log('OpenAI response received:', JSON.stringify(response.data));
+      console.log('OpenAI response received:', JSON.stringify(response));
 
       // Process and structure the response
-      const content = response.data.choices[0]?.message?.content;
+      const content = response.choices[0]?.message?.content;
       
       if (!content) {
         console.error('Empty content in OpenAI response');

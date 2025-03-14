@@ -1,11 +1,11 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from "openai/resources";
 
 // Initialize OpenAI client
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 // Course interface
 interface Course {
@@ -69,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
 
       // Use OpenAI to generate course recommendations
-      const response = await openai.createChatCompletion({
+      const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
@@ -101,15 +101,15 @@ You must return a JSON object with the following exact structure:
             role: "user",
             content: JSON.stringify(userData)
           }
-        ]
+        ] as ChatCompletionMessageParam[]
       });
 
-      if (!response.data.choices[0].message?.content) {
+      if (!response.choices[0].message?.content) {
         throw new Error("No response received from OpenAI");
       }
 
       // Parse OpenAI response
-      const content = response.data.choices[0].message.content;
+      const content = response.choices[0].message.content;
       console.log('Raw OpenAI response:', content);
 
       // Parse the JSON response
