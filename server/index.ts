@@ -29,12 +29,11 @@ const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
 // Apply middleware in the correct order
-if (process.env.NODE_ENV === 'production') {
-  app.use(redirectMiddleware);
-}
-
-// Apply CORS middleware
+// Apply CORS middleware first - this ensures all requests get proper CORS headers
 app.use(corsMiddleware);
+
+// Apply preflight redirect middleware early to handle OPTIONS requests correctly
+app.use(preflightRedirectMiddleware);
 
 // Also keep the standard cors middleware for compatibility
 app.use(cors({
@@ -107,9 +106,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Apply preflight redirect middleware
-app.use(preflightRedirectMiddleware);
-
 // Initialize default user
 async function initializeDefaultUser() {
   try {
@@ -179,6 +175,19 @@ async function initializeDefaultUser() {
 
     // Register API routes first
     const httpServer = await registerRoutes(app);
+
+    // IMPORTANT: Apply redirectMiddleware AFTER API routes but BEFORE static file serving
+    // This ensures API calls don't get redirected incorrectly
+    if (process.env.NODE_ENV === 'production') {
+      app.use((req, res, next) => {
+        // Skip redirect middleware for API routes
+        if (req.path.startsWith('/api/')) {
+          return next();
+        }
+        // Apply redirect middleware for non-API routes
+        redirectMiddleware(req, res, next);
+      });
+    }
 
     // Error handling middleware
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
