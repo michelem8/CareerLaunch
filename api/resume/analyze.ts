@@ -31,11 +31,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('User ID:', userId);
 
       if (!resumeText) {
-        return res.status(400).json({ error: 'Resume text is required' });
+        return res.status(400).json({ 
+          error: { 
+            code: '400',
+            message: 'Resume text is required'
+          }
+        });
       }
 
       if (!userId) {
-        return res.status(400).json({ error: 'User ID is required' });
+        return res.status(400).json({ 
+          error: { 
+            code: '400',
+            message: 'User ID is required'
+          }
+        });
+      }
+
+      // Check if OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY) {
+        console.error('OpenAI API key not configured');
+        return res.status(503).json({
+          error: {
+            code: '503',
+            message: 'Resume analysis service is temporarily unavailable'
+          }
+        });
       }
 
       console.log('Analyzing resume...');
@@ -52,16 +73,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         recommendations: result.recommendations || []
       };
 
-      // Save the analysis to storage
-      await storage.updateUserResumeAnalysis(userId, analysis);
-      console.log('Analysis saved to storage for user', userId);
+      try {
+        // Save the analysis to storage
+        await storage.updateUserResumeAnalysis(userId, analysis);
+        console.log('Analysis saved to storage for user', userId);
+      } catch (storageError) {
+        console.error('Error saving analysis to storage:', storageError);
+        return res.status(503).json({
+          error: {
+            code: '503',
+            message: 'Unable to save analysis results. Please try again later.'
+          }
+        });
+      }
 
       return res.status(200).json(analysis);
     } catch (error: any) {
       console.error('Error analyzing resume:', error.message);
+      // Handle specific error types
+      if (error.message.includes('quota') || error.message.includes('429')) {
+        return res.status(429).json({
+          error: {
+            code: '429',
+            message: 'Analysis service is currently at capacity. Please try again later.'
+          }
+        });
+      }
       return res.status(500).json({
-        error: 'Failed to analyze resume',
-        details: error.message
+        error: {
+          code: '500',
+          message: 'An unexpected error occurred during resume analysis',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        }
       });
     }
   } else {

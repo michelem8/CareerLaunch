@@ -5,6 +5,7 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -12,7 +13,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 3000,
     strictPort: true,
     proxy: {
       '/api': {
@@ -36,6 +37,7 @@ export default defineConfig({
         assetFileNames: 'assets/[name].[hash].[ext]'
       },
     },
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    copyPublicDir: true
   },
 }); 

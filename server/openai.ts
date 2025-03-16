@@ -1,5 +1,6 @@
 import { openai } from "./openai-client";
 import type { ChatCompletionMessageParam } from "openai/resources";
+import { supabase, getUserPreferences, saveUserPreferences } from '@/shared/supabase/client'
 // Interface for our chat messages - simplified for v3 compatibility
 interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -286,3 +287,10 @@ function getMockSkillGapAnalysis(
   // Return predefined skill gap for known roles or default if unknown
   return skillGaps[targetRole as keyof typeof skillGaps] || defaultSkillGap;
 }
+
+// Example: Save user preferences
+async function saveUserPreferencesExample() {
+  await saveUserPreferences({
+    preferred_job_titles: ['Software Engineer'],
+    preferred_skills: [],
+    salary_expectation_min: 80000,
